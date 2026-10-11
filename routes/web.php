@@ -6,15 +6,18 @@ use App\Http\Controllers\AdminAttendanceController;
 use Illuminate\Support\Facades\Route;
 
 // 一般ユーザー
-Route::get('/', function () {
-    return view('welcome');
+// 登録画面
+Route::get('/register', function () {
+    return view('user.register');
 });
+//ログイン画面
 Route::get('/login', function () {
     return view('user.user-login');
 });
+// 出勤打刻画面
 Route::get('/attendance', [AttendanceController::class, 'index']);
 Route::post('/attendance', [AttendanceController::class, 'store']);
-
+// 出勤一覧画面
 Route::get('/attendance/list', [AttendanceController::class, 'list']);
 
 

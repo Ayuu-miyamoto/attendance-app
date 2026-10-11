@@ -10,6 +10,7 @@ use Carbon\Carbon;
 
 class AttendanceController extends Controller
 {
+    // 
     public function index()
     {
         $user = Auth::user();
@@ -20,28 +21,19 @@ class AttendanceController extends Controller
 
         if (!$attendanceRecord) {
             $attendanceStatus = '勤務外';
-        } elseif ($attendanceRecord->clock_out) {
-            $attendanceStatus = '退勤済';
         } else {
-            $currentBreak = AttendanceBreak::where(
-                'attendance_record_id',
-                $attendanceRecord->id
-            )
-                ->whereNotNull('break_in')
-                ->whereNull('break_out')
-                ->first();
-
-            if ($currentBreak) {
-                $attendanceStatus = '休憩中';
-            } else {
-                $attendanceStatus = '出勤中';
-            }
+            $attendanceStatus = $attendanceRecord->getAttendanceStatus();
         }
 
+        // Blade が参照するユーザーのステータスに設定
         $user->attendance_status = $attendanceStatus;
 
-        $formattedDate = now()->format('Y年m月d日');
-        $formattedTime = now()->format('H:i');
+        $weekdays = ['日', '月', '火', '水', '木', '金', '土'];
+
+        $formattedDate = Carbon::now()->format('Y年n月j日')
+            . '(' . $weekdays[Carbon::now()->dayOfWeek] . ')';
+
+        $formattedTime = Carbon::now()->format('H:i');
 
         return view('user.attendance-register', compact(
             'user',
@@ -49,6 +41,8 @@ class AttendanceController extends Controller
             'formattedTime'
         ));
     }
+
+    // 
     public function store(Request $request)
         {
             $user = Auth::user();

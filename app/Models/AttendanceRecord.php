@@ -4,7 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class AttendanceRecord extends Model
 {
@@ -17,8 +16,32 @@ class AttendanceRecord extends Model
         'clock_out',
     ];
 
-    public function breaks(): HasMany
+    /**
+     * 勤怠記録に紐づく休憩記録
+     */
+    public function breaks()
     {
         return $this->hasMany(AttendanceBreak::class);
+    }
+
+    /**
+     * 勤怠ステータスを取得
+     */
+    public function getAttendanceStatus(): string
+    {
+        if ($this->clock_out) {
+            return '退勤済';
+        }
+
+        $currentBreak = $this->breaks()
+            ->whereNotNull('break_in')
+            ->whereNull('break_out')
+            ->exists();
+
+        if ($currentBreak) {
+            return '休憩中';
+        }
+
+        return '出勤中';
     }
 }
