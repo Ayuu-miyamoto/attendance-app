@@ -103,4 +103,42 @@ class AttendanceCorrect extends Model
             })
             ->toArray();
     }
+
+    // Bladeで使用するユーザー情報
+    public function getUserAttribute()
+    {
+        return $this->attendanceRecord?->user;
+    }
+
+    // Bladeで使用する修正対象の日付
+    public function getNewDateAttribute(): ?Carbon
+    {
+        $date = $this->attendanceRecord?->date;
+
+        return $date ? Carbon::parse($date) : null;
+    }
+
+    // Bladeで使用する修正後の出勤時刻
+    public function getNewClockInAttribute()
+    {
+        return $this->attributes['clock_in'] ?? null;
+    }
+
+    // Bladeで使用する修正後の退勤時刻
+    public function getNewClockOutAttribute()
+    {
+        return $this->attributes['clock_out'] ?? null;
+    }
+
+    // Bladeで使用する申請日時
+    public function getApplicationDateAttribute(): ?Carbon
+    {
+        return $this->requested_at;
+    }
+
+    // Bladeで使用する修正後の休憩データ
+    public function getProposalBreaksAttribute()
+    {
+        return $this->breakCorrects;
+    }
 }

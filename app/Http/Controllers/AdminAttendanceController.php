@@ -6,6 +6,8 @@ use App\Models\User;
 use App\Models\AttendanceRecord;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use App\Models\AttendanceCorrect;
+use Illuminate\Support\Facades\DB;
 
 class AdminAttendanceController extends Controller
 {
@@ -98,4 +100,58 @@ class AdminAttendanceController extends Controller
                 'user'
             ));
         }
+    // 修正申請一覧
+    public function applicationList(Request $request)
+    {
+        $status = $request->query('status', 'pending');
+
+        $query = AttendanceCorrect::with([
+            'attendanceRecord.user',
+            'breakCorrects',
+        ])->latest('requested_at');
+
+        if ($status === 'approved') {
+            $query->approved();
+        } else {
+            $query->pending();
+        }
+
+        $applications = $query->get();
+
+        return view('admin.admin-application-list', compact(
+            'applications'
+        ));
+    }
+
+    // 修正申請詳細
+    public function showApplication($id)
+    {
+        $application = AttendanceCorrect::with([
+            'attendanceRecord.user',
+            'breakCorrects',
+        ])->findOrFail($id);
+
+        $user = $application->attendanceRecord->user;
+
+        return view('admin.admin-application-detail', compact(
+            'application',
+            'user'
+        ));
+    }
+
+    // 修正申請を承認
+    public function approveApplication($id)
+    {
+        $application = AttendanceCorrect::findOrFail($id);
+
+        if (!$application->status) {
+            $application->status = true;
+            $application->approved_at = now();
+            $application->save();
+        }
+
+        return redirect(
+            '/stamp_correction_request/approve/' . $application->id
+        );
+    }
 }

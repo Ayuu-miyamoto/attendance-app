@@ -4,6 +4,7 @@ use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\AdminLoginController;
 use App\Http\Controllers\AdminAttendanceController;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Auth;
 
 // ==============================
 // 一般ユーザー
@@ -43,20 +44,12 @@ Route::post('/attendance/{id}', [
     'requestCorrection'
 ])->whereNumber('id');
 
-// 申請一覧画面
-Route::get('/stamp_correction_request/list', [
-    AttendanceController::class,
-    'correctionRequestList',
-]);
-
 // 申請詳細画面
 Route::get('/application/{id}', function ($id) {
     $application = \App\Models\AttendanceCorrect::findOrFail($id);
 
     return redirect('/attendance/detail/' . $application->attendance_record_id);
 })->middleware('auth');
-
-
 
 // ==============================
 // 管理者
@@ -84,3 +77,26 @@ Route::get('/admin/attendance/{id}', [
     AdminAttendanceController::class,
     'show'
 ])->middleware('admin')->whereNumber('id');
+
+// 修正申請の詳細画面
+Route::get(
+    '/stamp_correction_request/approve/{attendance_correct_request_id}',
+    [AdminAttendanceController::class, 'showApplication']
+)->middleware('admin')->whereNumber('attendance_correct_request_id');
+
+// 修正申請の承認処理
+Route::post(
+    '/stamp_correction_request/approve/{attendance_correct_request_id}',
+    [AdminAttendanceController::class, 'approveApplication']
+)->middleware('admin')->whereNumber('attendance_correct_request_id');
+
+// ★★修正申請一覧画面（一般ユーザー・管理者共通）
+Route::get('/stamp_correction_request/list', function () {
+    if (Auth::user()->admin_status) {
+        return app(AdminAttendanceController::class)
+            ->applicationList(request());
+    }
+
+    return app(AttendanceController::class)
+        ->correctionRequestList();
+})->middleware('auth');
