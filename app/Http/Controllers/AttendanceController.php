@@ -7,6 +7,10 @@ use App\Models\AttendanceBreak;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
+use App\Models\AttendanceCorrect;
+use App\Http\Requests\AttendanceCorrectionRequest;
+use App\Models\BreakCorrect;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 class AttendanceController extends Controller
 {
@@ -55,13 +59,15 @@ class AttendanceController extends Controller
 
             // 出勤
             if ($action === 'clock_in') {
-                AttendanceRecord::create([
-                    'user_id' => $user->id,
-                    'date' => today(),
-                    'clock_in' => now()->format('H:i:s'),
-                ]);
+                // 当日の勤怠レコードがなければ出勤記録を作成
+                if (!$attendanceRecord) {
+                    AttendanceRecord::create([
+                        'user_id' => $user->id,
+                        'date' => today(),
+                        'clock_in' => now()->format('H:i:s'),
+                    ]);
+                }
             }
-
             // 退勤
             elseif ($action === 'clock_out') {
                 if ($attendanceRecord) {
@@ -102,8 +108,9 @@ class AttendanceController extends Controller
 
             return redirect('/attendance');
         }
-
-        public function list(Request $request)
+    
+    // 
+    public function list(Request $request)
         {
             $user = Auth::user();
 
@@ -175,4 +182,147 @@ class AttendanceController extends Controller
                 'formattedAttendanceRecords'
             ));
         }
+
+    public function show(int $id)
+    {
+        $user = Auth::user();
+
+        // ログイン中のユーザー本人の勤怠だけ取得する
+        $attendanceRecord = AttendanceRecord::with('breaks')
+            ->where('user_id', $user->id)
+            ->findOrFail($id);
+
+        // 承認待ちの修正申請を取得する
+        // status: false = 承認待ち、true = 承認済み
+        $application = AttendanceCorrect::with('breakCorrects')
+            ->where('attendance_record_id', $attendanceRecord->id)
+            ->where('status', false)
+            ->latest()
+            ->first();
+
+        // 承認待ち申請がある場合は申請内容、なければ元の勤怠を表示する
+        $displayClockIn = $application
+            ? $application->clock_in
+            : $attendanceRecord->clock_in;
+
+        $displayClockOut = $application
+            ? $application->clock_out
+            : $attendanceRecord->clock_out;
+
+        $displayMemo = $application
+            ? $application->comment
+            : '';
+
+        if ($application) {
+            $breaks = $application->breakCorrects->map(function ($break) {
+                return [
+                    'break_in' => $break->break_in
+                        ? Carbon::parse($break->break_in)->format('H:i')
+                        : '',
+                    'break_out' => $break->break_out
+                        ? Carbon::parse($break->break_out)->format('H:i')
+                        : '',
+                ];
+            })->toArray();
+        } else {
+            $breaks = $attendanceRecord->breaks->map(function ($break) {
+                return [
+                    'break_in' => $break->break_in
+                        ? Carbon::parse($break->break_in)->format('H:i')
+                        : '',
+                    'break_out' => $break->break_out
+                        ? Carbon::parse($break->break_out)->format('H:i')
+                        : '',
+                ];
+            })->toArray();
+        }
+
+        $date = Carbon::parse($attendanceRecord->date);
+
+        $data = [
+            'id' => $attendanceRecord->id,
+            'year' => $date->format('Y年'),
+            'date' => $date->format('n月j日'),
+            'clock_in' => $displayClockIn
+                ? Carbon::parse($displayClockIn)->format('H:i')
+                : '',
+            'clock_out' => $displayClockOut
+                ? Carbon::parse($displayClockOut)->format('H:i')
+                : '',
+            'breaks' => $breaks,
+            'comment' => $displayMemo ?? '',
+            'application' => $application,
+        ];
+
+        return view('user.user-detail', compact('user', 'data'));
+    }
+
+    public function requestCorrection(
+        AttendanceCorrectionRequest $request,
+        int $id
+    ) {
+        $user = Auth::user();
+
+        // ログイン中のユーザー本人の勤怠だけ取得する
+        $attendanceRecord = AttendanceRecord::where('user_id', $user->id)
+            ->findOrFail($id);
+
+        // 承認待ちの申請がある場合は、新しい申請を作成しない
+        $hasPendingApplication = AttendanceCorrect::where(
+            'attendance_record_id',
+            $attendanceRecord->id
+        )
+            ->where('approval_status', false)
+            ->exists();
+
+        if ($hasPendingApplication) {
+            return redirect('/attendance/detail/' . $id);
+        }
+
+        $validated = $request->validated();
+
+        // 勤怠修正申請を保存
+        $application = AttendanceCorrect::create([
+            'attendance_record_id' => $attendanceRecord->id,
+            'clock_in' => $validated['new_clock_in'],
+            'clock_out' => $validated['new_clock_out'],
+            'comment' => $validated['comment'],
+            'status' => false,
+            'requested_at' => now(),
+        ]);
+
+        // 休憩の修正申請を保存
+        $breakIns = $validated['new_break_in'] ?? [];
+        $breakOuts = $validated['new_break_out'] ?? [];
+
+        foreach ($breakIns as $index => $breakIn) {
+            $breakOut = $breakOuts[$index] ?? null;
+
+            // 開始・終了が両方空なら保存しない
+            if (blank($breakIn) && blank($breakOut)) {
+                continue;
+            }
+
+            $application->breakCorrects()->create([
+                'break_in' => $breakIn ?: null,
+                'break_out' => $breakOut ?: null,
+            ]);
+        }
+
+        return redirect('/attendance/detail/' . $id);
+    }
+
+    // 申請一覧画面
+    public function correctionRequestList()
+    {
+        $user = Auth::user();
+
+        $formattedApplications =
+            AttendanceCorrect::getFormattedApplications($user->id);
+
+        return view('user.user-application-list', compact(
+            'user',
+            'formattedApplications'
+        ));
+    }
 }

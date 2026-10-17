@@ -14,6 +14,7 @@ class AttendanceRecord extends Model
         'date',
         'clock_in',
         'clock_out',
+        'comment',
     ];
 
     /**
@@ -34,7 +35,6 @@ class AttendanceRecord extends Model
         }
 
         $currentBreak = $this->breaks()
-            ->whereNotNull('break_in')
             ->whereNull('break_out')
             ->exists();
 
@@ -44,4 +44,18 @@ class AttendanceRecord extends Model
 
         return '出勤中';
     }
-}
+
+    protected $casts = [
+    'date' => 'date',
+    ];
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
+
+        public function attendanceCorrects()
+    {
+        return $this->hasMany(AttendanceCorrect::class);
+    }
+}   

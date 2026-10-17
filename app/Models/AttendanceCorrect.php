@@ -6,28 +6,101 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Carbon\Carbon;
 
 class AttendanceCorrect extends Model
 {
     use HasFactory;
 
+    protected $table = 'attendance_corrects';
+
     protected $fillable = [
         'attendance_record_id',
         'clock_in',
         'clock_out',
-        'memo',
+        'comment',
         'status',
         'requested_at',
         'approved_at',
     ];
 
+    protected $casts = [
+        'status' => 'boolean',
+        'requested_at' => 'datetime',
+        'approved_at' => 'datetime',
+    ];
+
+    // 修正対象の勤怠レコード
     public function attendanceRecord(): BelongsTo
     {
         return $this->belongsTo(AttendanceRecord::class);
     }
 
+    // 修正申請に紐づく休憩データ
     public function breakCorrects(): HasMany
     {
-        return $this->hasMany(BreakCorrect::class);
+        return $this->hasMany(
+            BreakCorrect::class,
+            'attendance_correct_id'
+        );
+    }
+    // ログインユーザーの申請を取得
+    public function scopeForUser($query, int $userId)
+    {
+        return $query->whereHas('attendanceRecord', function ($query) use ($userId) {
+            $query->where('user_id', $userId);
+        });
+    }
+
+    // 申請データを関連データと一緒に取得
+    public function scopeWithCorrectionDetails($query)
+    {
+        return $query->with([
+            'attendanceRecord.user',
+            'breakCorrects',
+        ]);
+    }
+
+    // 承認待ちの申請
+    public function scopePending($query)
+    {
+        return $query->where('status', false);
+    }
+
+    // 承認済みの申請
+    public function scopeApproved($query)
+    {
+        return $query->where('status', true);
+    }
+
+    // 承認状態をBlade表示用の文字列に変換
+    public function getApprovalStatusAttribute(): string
+    {
+        return $this->attributes['status']
+            ? '承認済み'
+            : '承認待ち';
+    }
+
+    // ログインユーザーの申請一覧を表示用データに変換
+    public static function getFormattedApplications(int $userId): array
+    {
+        return self::forUser($userId)
+            ->withCorrectionDetails()
+            ->latest('requested_at')
+            ->get()
+            ->map(function ($application) {
+                return [
+                    'id' => $application->id,
+                    'approval_status' => $application->approval_status,
+                    'date' => Carbon::parse(
+                        $application->attendanceRecord->date
+                    )->format('Y/m/d'),
+                    'comment' => $application->comment,
+                    'application_date' => $application->requested_at
+                        ? $application->requested_at->format('Y/m/d')
+                        : '',
+                ];
+            })
+            ->toArray();
     }
 }

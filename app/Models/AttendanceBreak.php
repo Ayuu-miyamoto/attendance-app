@@ -16,6 +16,7 @@ class AttendanceBreak extends Model
         'attendance_record_id',
         'break_in',
         'break_out',
+        'comment',
     ];
 
     public function attendanceRecord(): BelongsTo

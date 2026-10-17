@@ -18,8 +18,8 @@ return new class extends Migration
                 ->cascadeOnDelete();
             $table->time('clock_in')->nullable();
             $table->time('clock_out')->nullable();
-            $table->string('memo')->nullable();
-            $table->boolean('status');
+            $table->string('comment')->nullable();
+            $table->boolean('approval_status')->default(false);
             $table->timestamp('requested_at')->nullable();
             $table->timestamp('approved_at')->nullable();
             $table->timestamps();
@@ -31,6 +31,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        //
+        Schema::dropIfExists('attendance_corrects');
     }
 };
