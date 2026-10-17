@@ -12,7 +12,7 @@ use App\Http\Requests\AttendanceCorrectionRequest;
 
 class AttendanceController extends Controller
 {
-    // 
+    // 一般ユーザー勤怠打刻画面
     public function index()
     {
         $user = Auth::user();
@@ -44,7 +44,7 @@ class AttendanceController extends Controller
         ));
     }
 
-    // 
+    // 勤怠打刻処理
     public function store(Request $request)
         {
             $user = Auth::user();
@@ -107,7 +107,7 @@ class AttendanceController extends Controller
             return redirect('/attendance');
         }
     
-    // 
+    // 勤怠一覧
     public function list(Request $request)
         {
             $user = Auth::user();
@@ -181,6 +181,7 @@ class AttendanceController extends Controller
             ));
         }
 
+    // 勤怠詳細画面
     public function show(int $id)
     {
         $user = Auth::user();
@@ -255,6 +256,7 @@ class AttendanceController extends Controller
         return view('user.user-detail', compact('user', 'data'));
     }
 
+    // 勤怠修正申請
     public function requestCorrection(
         AttendanceCorrectionRequest $request,
         int $id

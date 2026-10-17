@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\DB;
 
 class AdminAttendanceController extends Controller
 {
+    // 管理者用勤怠一覧
     public function index(Request $request)
     {
         $date = $request->date
@@ -64,6 +65,7 @@ class AdminAttendanceController extends Controller
         ));
     }
 
+    // 勤怠詳細画面
     public function show($id)
         {
             $attendance = AttendanceRecord::with('breaks')->findOrFail($id);
@@ -100,6 +102,7 @@ class AdminAttendanceController extends Controller
                 'user'
             ));
         }
+        
     // 修正申請一覧
     public function applicationList(Request $request)
     {
