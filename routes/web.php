@@ -6,9 +6,9 @@ use App\Http\Controllers\AdminAttendanceController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
 
-// ==============================
+// ==================================================================================
 // 一般ユーザー
-// ==============================
+// ==================================================================================
 
 // 登録画面
 Route::get('/register', function () {
@@ -27,17 +27,6 @@ Route::post('/attendance', [AttendanceController::class, 'store']);
 // 勤怠一覧画面
 Route::get('/attendance/list', [AttendanceController::class, 'list']);
 
-// 勤怠詳細画面（仕様書のURL）
-Route::get('/attendance/detail/{id}', [
-    AttendanceController::class,
-    'show'
-])->whereNumber('id');
-
-// Bladeが使用するURLから仕様書のURLへ転送
-Route::get('/attendance/{id}', function (int $id) {
-    return redirect('/attendance/detail/' . $id);
-})->whereNumber('id');
-
 // 勤怠修正申請
 Route::post('/attendance/{id}', [
     AttendanceController::class,
@@ -51,9 +40,22 @@ Route::get('/application/{id}', function ($id) {
     return redirect('/attendance/detail/' . $application->attendance_record_id);
 })->middleware('auth');
 
-// ==============================
+// ==================================================================================
+// 一般ユーザー・管理者共通
+// ==================================================================================
+
+// 勤怠詳細画面
+Route::get('/attendance/{id}', function (int $id) {
+    if (Auth::user()->admin_status) {
+        return app(AdminAttendanceController::class)->show($id);
+    }
+
+    return app(AttendanceController::class)->show($id);
+})->middleware('auth')->whereNumber('id');
+
+// ==================================================================================
 // 管理者
-// ==============================
+// ==================================================================================
 
 // 管理者ログイン画面
 Route::get('/admin/login', function () {
@@ -72,12 +74,6 @@ Route::get('/admin/attendance/list', [
     'index'
 ])->middleware('admin');
 
-// 勤怠詳細画面
-Route::get('/admin/attendance/{id}', [
-    AdminAttendanceController::class,
-    'show'
-])->middleware('admin')->whereNumber('id');
-
 // 修正申請の詳細画面
 Route::get(
     '/stamp_correction_request/approve/{attendance_correct_request_id}',
@@ -90,7 +86,11 @@ Route::post(
     [AdminAttendanceController::class, 'approveApplication']
 )->middleware('admin')->whereNumber('attendance_correct_request_id');
 
-// ★★修正申請一覧画面（一般ユーザー・管理者共通）
+
+// ==================================================================================
+// 一般ユーザー・管理者共通
+// ==================================================================================
+// 修正申請一覧画面
 Route::get('/stamp_correction_request/list', function () {
     if (Auth::user()->admin_status) {
         return app(AdminAttendanceController::class)

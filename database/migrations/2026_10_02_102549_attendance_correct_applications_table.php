@@ -19,7 +19,7 @@ return new class extends Migration
             $table->time('clock_in')->nullable();
             $table->time('clock_out')->nullable();
             $table->string('comment')->nullable();
-            $table->boolean('approval_status')->default(false);
+            $table->boolean('status')->default(false);
             $table->timestamp('requested_at')->nullable();
             $table->timestamp('approved_at')->nullable();
             $table->timestamps();

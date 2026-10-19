@@ -11,7 +11,12 @@ class AdminMiddleware
 {
     public function handle(Request $request, Closure $next): Response
     {
-        if (!Auth::check() || !Auth::user()->admin_status) {
+        Auth::shouldUse('admin');
+
+        if (
+            !Auth::check() ||
+            !Auth::user()->admin_status
+        ) {
             return redirect('/admin/login');
         }
 

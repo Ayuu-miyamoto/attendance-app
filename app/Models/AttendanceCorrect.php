@@ -20,8 +20,6 @@ class AttendanceCorrect extends Model
         'clock_out',
         'comment',
         'status',
-        'requested_at',
-        'approved_at',
     ];
 
     protected $casts = [
@@ -91,7 +89,7 @@ class AttendanceCorrect extends Model
             ->map(function ($application) {
                 return [
                     'id' => $application->id,
-                    'approval_status' => $application->approval_status,
+                    'status' => $application->status,
                     'date' => Carbon::parse(
                         $application->attendanceRecord->date
                     )->format('Y/m/d'),

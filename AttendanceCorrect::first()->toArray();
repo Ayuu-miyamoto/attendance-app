@@ -1,0 +1,12 @@
+[90m= [39m[
+    [32m"[39m[32mid[39m[32m"[39m,
+    [32m"[39m[32mattendance_record_id[39m[32m"[39m,
+    [32m"[39m[32mclock_in[39m[32m"[39m,
+    [32m"[39m[32mclock_out[39m[32m"[39m,
+    [32m"[39m[32mcomment[39m[32m"[39m,
+    [32m"[39m[32mstatus[39m[32m"[39m,
+    [32m"[39m[32mrequested_at[39m[32m"[39m,
+    [32m"[39m[32mapproved_at[39m[32m"[39m,
+    [32m"[39m[32mcreated_at[39m[32m"[39m,
+    [32m"[39m[32mupdated_at[39m[32m"[39m,
+  ]

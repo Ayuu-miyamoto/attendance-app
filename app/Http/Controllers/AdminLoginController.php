@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Auth;
 
 class AdminLoginController extends Controller
 {
+    // 管理者ログイン処理
     public function login(Request $request)
     {
         $credentials = $request->validate([
@@ -17,7 +18,7 @@ class AdminLoginController extends Controller
             'password.required' => 'パスワードを入力してください',
         ]);
 
-        if (Auth::attempt([
+        if (Auth::guard('admin')->attempt([
             'email' => $credentials['email'],
             'password' => $credentials['password'],
             'admin_status' => true,

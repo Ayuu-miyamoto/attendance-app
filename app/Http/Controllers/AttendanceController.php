@@ -272,7 +272,7 @@ class AttendanceController extends Controller
             'attendance_record_id',
             $attendanceRecord->id
         )
-            ->where('approval_status', false)
+            ->where('status', false)
             ->exists();
 
         if ($hasPendingApplication) {
