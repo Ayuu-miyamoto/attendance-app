@@ -89,7 +89,7 @@ class AttendanceCorrect extends Model
             ->map(function ($application) {
                 return [
                     'id' => $application->id,
-                    'status' => $application->status,
+                    'approval_status' => $application->approval_status,
                     'date' => Carbon::parse(
                         $application->attendanceRecord->date
                     )->format('Y/m/d'),

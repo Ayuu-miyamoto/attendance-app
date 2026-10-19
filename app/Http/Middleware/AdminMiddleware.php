@@ -9,17 +9,21 @@ use Symfony\Component\HttpFoundation\Response;
 
 class AdminMiddleware
 {
+    
     public function handle(Request $request, Closure $next): Response
     {
-        Auth::shouldUse('admin');
-
+        // 管理者ガードで認証されているか確認
         if (
-            !Auth::check() ||
-            !Auth::user()->admin_status
+            !Auth::guard('admin')->check() ||
+            !Auth::guard('admin')->user()->admin_status
         ) {
             return redirect('/admin/login');
         }
 
+        // 既存のBladeが参照するデフォルトガードをadminにする
+        Auth::shouldUse('admin');
+
         return $next($request);
     }
+
 }
