@@ -104,23 +104,18 @@ class AdminAttendanceController extends Controller
         }
         
     // 修正申請一覧
-    public function applicationList(Request $request)
+    public function applicationList()
     {
-        $status = $request->query('status', 'pending');
+        // 承認待ち・承認済みを含むすべての申請を取得する
+        $applications = AttendanceCorrect::withCorrectionDetails()
 
-        $query = AttendanceCorrect::with([
-            'attendanceRecord.user',
-            'breakCorrects',
-        ])->latest('requested_at');
+            // 申請日時が新しい順に並べる
+            ->latest('requested_at')
 
-        if ($status === 'approved') {
-            $query->approved();
-        } else {
-            $query->pending();
-        }
+            // データベースから申請一覧を取得する
+            ->get();
 
-        $applications = $query->get();
-
+        // 申請一覧画面にデータを渡す
         return view('admin.admin-application-list', compact(
             'applications'
         ));
@@ -147,8 +142,8 @@ class AdminAttendanceController extends Controller
     {
         $application = AttendanceCorrect::findOrFail($id);
 
-        if (!$application->status) {
-            $application->status = true;
+        if ($application->approval_status === '承認待ち') {
+            $application->approval_status = true;
             $application->approved_at = now();
             $application->save();
         }

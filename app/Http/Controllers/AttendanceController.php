@@ -195,7 +195,7 @@ class AttendanceController extends Controller
         // status: false = 承認待ち、true = 承認済み
         $application = AttendanceCorrect::with('breakCorrects')
             ->where('attendance_record_id', $attendanceRecord->id)
-            ->where('status', false)
+            ->where('approval_status', false)
             ->latest()
             ->first();
 
@@ -272,11 +272,12 @@ class AttendanceController extends Controller
             'attendance_record_id',
             $attendanceRecord->id
         )
-            ->where('status', false)
+            ->where('approval_status', false)
             ->exists();
 
         if ($hasPendingApplication) {
-            return redirect('/attendance/detail/' . $id);
+            // ① 承認待ちの申請がある場合は勤怠詳細画面に戻る
+            return redirect('/attendance/' . $id);
         }
 
         $validated = $request->validated();
@@ -287,7 +288,7 @@ class AttendanceController extends Controller
             'clock_in' => $validated['new_clock_in'],
             'clock_out' => $validated['new_clock_out'],
             'comment' => $validated['comment'],
-            'status' => false,
+            'approval_status' => false,
             'requested_at' => now(),
         ]);
 
@@ -309,7 +310,8 @@ class AttendanceController extends Controller
             ]);
         }
 
-        return redirect('/attendance/detail/' . $id);
+        // ② 修正申請の保存後、勤怠詳細画面に戻る
+        return redirect('/attendance/' . $id);
     }
 
     // 申請一覧画面

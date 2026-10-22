@@ -19,11 +19,11 @@ class AttendanceCorrect extends Model
         'clock_in',
         'clock_out',
         'comment',
-        'status',
+        'approval_status',
     ];
 
     protected $casts = [
-        'status' => 'boolean',
+        'approval_status' => 'boolean',
         'requested_at' => 'datetime',
         'approved_at' => 'datetime',
     ];
@@ -62,19 +62,19 @@ class AttendanceCorrect extends Model
     // 承認待ちの申請
     public function scopePending($query)
     {
-        return $query->where('status', false);
+        return $query->where('approval_status', false);
     }
 
     // 承認済みの申請
     public function scopeApproved($query)
     {
-        return $query->where('status', true);
+        return $query->where('approval_status', true);
     }
 
     // 承認状態をBlade表示用の文字列に変換
     public function getApprovalStatusAttribute(): string
     {
-        return $this->attributes['status']
+        return $this->attributes['approval_status']
             ? '承認済み'
             : '承認待ち';
     }

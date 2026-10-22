@@ -70,13 +70,11 @@ Route::get('/application/{id}', function ($id) {
 // ==================================================================================
 
 // 勤怠詳細画面
-Route::get('/attendance/{id}', function (int $id) {
-    if (Auth::user()->admin_status) {
-        return app(AdminAttendanceController::class)->show($id);
-    }
-
-    return app(AttendanceController::class)->show($id);
-})->middleware('auth')->whereNumber('id');
+Route::get('/attendance/{id}', [
+    // 勤怠詳細画面はAttendanceControllerで表示する
+    AttendanceController::class,
+    'show',
+])->middleware('auth')->whereNumber('id');
 
 // 修正申請一覧画面
 
@@ -141,3 +139,8 @@ Route::get('/admin/staff/list', [
     StaffController::class,
     'index',
 ])->middleware('admin');
+
+// スタッフ別勤怠一覧
+Route::get('/admin/attendance/staff/{id}', [
+    StaffController::class,
+    'show',])->middleware('admin')->whereNumber('id');  

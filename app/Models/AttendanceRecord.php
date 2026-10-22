@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Carbon;
 
 class AttendanceRecord extends Model
 {
@@ -57,5 +58,43 @@ class AttendanceRecord extends Model
         public function attendanceCorrects()
     {
         return $this->hasMany(AttendanceCorrect::class);
+    }
+
+    // 休憩時間の合計（分）
+    public function getTotalBreakMinutesAttribute()
+    {
+        return $this->breaks->sum(function ($break) {
+            if (!$break->break_in || !$break->break_out) {
+                return 0;
+            }
+
+            return Carbon::parse($break->break_in)
+                ->diffInMinutes(Carbon::parse($break->break_out));
+        });
+    }
+
+    // 勤務時間の合計（分）
+    public function getTotalWorkMinutesAttribute()
+    {
+        if (!$this->clock_in || !$this->clock_out) {
+            return 0;
+        }
+
+        return max(
+            0,
+            Carbon::parse($this->clock_in)
+                ->diffInMinutes(Carbon::parse($this->clock_out))
+                - $this->total_break_minutes
+        );
+    }
+
+    // 分を HH:MM:SS 形式に変換
+    public function formatMinutes($minutes)
+    {
+        return sprintf(
+            '%02d:%02d:00',
+            intdiv($minutes, 60),
+            $minutes % 60
+        );
     }
 }   
