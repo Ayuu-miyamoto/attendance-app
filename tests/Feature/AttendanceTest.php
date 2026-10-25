@@ -42,6 +42,9 @@ class AttendanceTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertSee('勤務外');
+
+        // 勤務外の場合、出勤ボタンが表示されることを確認する
+        $response->assertSee('value="clock_in"', false);
     }
 
     /**
@@ -62,6 +65,12 @@ class AttendanceTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertSee('出勤中');
+
+        // 出勤中の場合、休憩入ボタンが表示されることを確認する
+        $response->assertSee('value="break_in"', false);
+
+        // 出勤中の場合、退勤ボタンが表示されることを確認する
+        $response->assertSee('value="clock_out"', false);
     }
 
     /**
@@ -88,6 +97,9 @@ class AttendanceTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertSee('休憩中');
+
+        // 休憩中の場合、休憩戻ボタンが表示されることを確認する
+        $response->assertSee('value="break_out"', false);
     }
 
     /**
@@ -115,22 +127,34 @@ class AttendanceTest extends TestCase
      */
     public function test_clock_in_saves_attendance_record(): void
     {
+        // テスト用ユーザーを作成する
         $user = User::factory()->create();
 
+        // テスト日時を2026年10月11日9時に固定する
         Carbon::setTestNow(Carbon::parse('2026-10-11 09:00:00'));
 
+        // 出勤処理を実行する
         $response = $this->actingAs($user)->post('/attendance', [
             'action' => 'clock_in',
         ]);
 
+        // 出勤処理後、勤怠登録画面にリダイレクトされることを確認する
         $response->assertRedirect('/attendance');
 
+        // 出勤日時がデータベースに正しく保存されていることを確認する
         $this->assertDatabaseHas('attendance_records', [
             'user_id' => $user->id,
             'date' => '2026-10-11 00:00:00',
             'clock_in' => '09:00:00',
         ]);
 
+        // 出勤後の勤怠登録画面を取得する
+        $response = $this->get('/attendance');
+
+        // 出勤後、ステータスが「出勤中」になっていることを確認する
+        $response->assertSee('出勤中');
+
+        // テスト用に固定した日時を元に戻す
         Carbon::setTestNow();
     }
 
@@ -252,6 +276,9 @@ class AttendanceTest extends TestCase
         $response->assertSee('出勤中');
 
         Carbon::setTestNow();
+
+        // 休憩終了後、再び休憩入ボタンが表示されることを確認する
+        $response->assertSee('value="break_in"', false);
     }
 
     /**

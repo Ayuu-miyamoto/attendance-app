@@ -8,6 +8,7 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use App\Models\AttendanceCorrect;
 use Illuminate\Support\Facades\DB;
+use App\Http\Requests\AttendanceCorrectionRequest;
 
 class AdminAttendanceController extends Controller
 {
@@ -102,6 +103,68 @@ class AdminAttendanceController extends Controller
                 'user'
             ));
         }
+
+    /**
+     * 管理者による勤怠修正処理
+     */
+    public function update(AttendanceCorrectionRequest $request, int $id)
+    {
+        // バリデーション済みの入力値を取得する
+        $validated = $request->validated();
+
+        // 指定された勤怠データを取得する
+        $attendance = AttendanceRecord::findOrFail($id);
+
+        // 勤怠と休憩をまとめて更新する
+        DB::transaction(function () use ($attendance, $validated) {
+
+            // 出勤・退勤時刻を秒まで含む形式に変換して更新する
+            $attendance->update([
+
+                // 出勤時刻を「09:30」から「09:30:00」に変換する
+                'clock_in' => $validated['new_clock_in'] . ':00',
+
+                // 退勤時刻を「18:30」から「18:30:00」に変換する
+                'clock_out' => $validated['new_clock_out'] . ':00',
+            ]);
+
+            // 既存の休憩データを削除する
+            $attendance->breaks()->delete();
+
+            // 入力された休憩開始時刻を取得する
+            $breakIns = $validated['new_break_in'] ?? [];
+
+            // 入力された休憩終了時刻を取得する
+            $breakOuts = $validated['new_break_out'] ?? [];
+
+            // 休憩データを1件ずつ処理する
+            foreach ($breakIns as $index => $breakIn) {
+
+                // 同じ番号の休憩終了時刻を取得する
+                $breakOut = $breakOuts[$index] ?? null;
+
+                // 開始・終了が両方空欄の場合は保存しない
+                if (blank($breakIn) && blank($breakOut)) {
+                    continue;
+                }
+
+                // 休憩データを新しく保存する
+                $attendance->breaks()->create([
+
+                    // 休憩開始時刻を「12:00」から「12:00:00」に変換する
+                    // 未入力の場合はnullを保存する
+                    'break_in' => filled($breakIn) ? $breakIn . ':00' : null,
+
+                    // 休憩終了時刻を「13:00」から「13:00:00」に変換する
+                    // 未入力の場合はnullを保存する
+                    'break_out' => filled($breakOut) ? $breakOut . ':00' : null,
+                ]);
+            }
+        });
+
+        // 更新後は管理者用の勤怠詳細画面に戻る
+        return redirect('/admin/attendance/' . $id);
+    }
         
     // 修正申請一覧
     public function applicationList()

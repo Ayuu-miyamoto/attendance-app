@@ -44,9 +44,10 @@ class AuthenticationTest extends TestCase
         ]); 
     }
 
-    // 未入力の場合、バリデーションエラーになる
+    // 名前・メールアドレス・パスワードが未入力の場合のバリデーションを確認する
     public function test_user_register_required(): void
     {
+        // 必須項目を空欄にして会員登録処理を実行する
         $response = $this->post('/register', [
             'name' => '',
             'email' => '',
@@ -54,11 +55,11 @@ class AuthenticationTest extends TestCase
             'password_confirmation' => '',
         ]);
 
-        // バリデーションエラーが発生することを確認する
+        // 仕様書どおりのエラーメッセージが返されることを確認する
         $response->assertSessionHasErrors([
-            'name',
-            'email',
-            'password',
+            'name' => 'お名前を入力してください',
+            'email' => 'メールアドレスを入力してください',
+            'password' => 'パスワードを入力してください',
         ]);
     }
 
@@ -89,13 +90,14 @@ class AuthenticationTest extends TestCase
         ]);
 
         $response->assertSessionHasErrors([
-            'password',
+            'password' => 'パスワードは8文字以上で入力してください',
         ]);
     }
 
-    // 確認用パスワードが異なる場合、バリデーションエラーになる
+   // 確認用パスワードが一致しない場合、バリデーションエラーになる
     public function test_user_register_password_confirmation(): void
     {
+        // パスワードと確認用パスワードに異なる値を設定する
         $response = $this->post('/register', [
             'name' => 'テストユーザー',
             'email' => 'test@example.com',
@@ -103,8 +105,9 @@ class AuthenticationTest extends TestCase
             'password_confirmation' => 'different123',
         ]);
 
+        // パスワードが一致しない場合、仕様書どおりのエラーメッセージが返されることを確認する
         $response->assertSessionHasErrors([
-            'password',
+            'password' => 'パスワードと一致しません',
         ]);
     }
 
@@ -128,24 +131,30 @@ class AuthenticationTest extends TestCase
             'password' => '',
         ]);
 
-        $response->assertSessionHasErrors([
-            'email',
-            'password',
+        // メールアドレスとパスワードが未入力の場合、
+    // 仕様書どおりのエラーメッセージが返されることを確認する
+    $response->assertSessionHasErrors([
+        'email' => 'メールアドレスを入力してください',
+        'password' => 'パスワードを入力してください',
         ]);
     }
 
     // 間違った情報ではログインできない
+    // 間違った情報ではログインできない
     public function test_user_login_failed(): void
     {
+        // 間違ったメールアドレスとパスワードでログインする
         $response = $this->post('/login', [
             'email' => 'wrong@example.com',
             'password' => 'wrongpassword',
         ]);
 
+        // 仕様書どおりのエラーメッセージが返されることを確認する
         $response->assertSessionHasErrors([
-            'email',
+            'email' => 'ログイン情報が登録されていません',
         ]);
 
+        // ログインしていないことを確認する
         $this->assertGuest();
     }
 
@@ -188,9 +197,11 @@ class AuthenticationTest extends TestCase
             'password' => '',
         ]);
 
+        // メールアドレスとパスワードが未入力の場合、
+        // 仕様書どおりのエラーメッセージが返されることを確認する
         $response->assertSessionHasErrors([
-            'email',
-            'password',
+            'email' => 'メールアドレスを入力してください',
+            'password' => 'パスワードを入力してください',
         ]);
     }
 
@@ -202,8 +213,10 @@ class AuthenticationTest extends TestCase
             'password' => 'wrongpassword',
         ]);
 
+        // ログイン情報が一致しない場合、
+        // 仕様書どおりのエラーメッセージが返されることを確認する
         $response->assertSessionHasErrors([
-            'email',
+            'email' => 'ログイン情報が登録されていません',
         ]);
 
         $this->assertGuest();
@@ -225,6 +238,7 @@ class AuthenticationTest extends TestCase
 
         $response->assertRedirect('/admin/attendance/list');
 
-        $this->assertAuthenticatedAs($admin);
+        // adminガードで管理者として認証されていることを確認
+        $this->assertAuthenticatedAs($admin, 'admin');
     }
 }
