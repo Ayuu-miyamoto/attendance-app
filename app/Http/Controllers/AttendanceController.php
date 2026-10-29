@@ -12,22 +12,28 @@ use App\Http\Requests\AttendanceCorrectionRequest;
 
 class AttendanceController extends Controller
 {
-    // 一般ユーザー勤怠打刻画面
+    /**
+     * 一般ユーザー勤怠打刻画面
+     */
     public function index()
     {
+        // ログイン中のユーザー情報を取得する
         $user = Auth::user();
 
+        // 当日の勤怠レコードを取得する
         $attendanceRecord = AttendanceRecord::where('user_id', $user->id)
             ->whereDate('date', today())
             ->first();
 
+        // 勤怠ステータスを取得する
+        // もし勤怠レコードがなければ勤務外とする
         if (!$attendanceRecord) {
             $attendanceStatus = '勤務外';
+        // 勤怠レコードがある場合は、勤怠ステータスを取得する
         } else {
             $attendanceStatus = $attendanceRecord->getAttendanceStatus();
         }
 
-        // Blade が参照するユーザーのステータスに設定
         $user->attendance_status = $attendanceStatus;
 
         $weekdays = ['日', '月', '火', '水', '木', '金', '土'];
@@ -44,7 +50,9 @@ class AttendanceController extends Controller
         ));
     }
 
-    // 勤怠打刻処理
+    /**
+     * 勤怠打刻処理
+     */
     public function store(Request $request)
         {
             $user = Auth::user();
@@ -107,7 +115,9 @@ class AttendanceController extends Controller
             return redirect('/attendance');
         }
     
-    // 勤怠一覧
+    /**
+     * 勤怠一覧
+    */
     public function list(Request $request)
         {
             $user = Auth::user();
@@ -181,7 +191,9 @@ class AttendanceController extends Controller
             ));
         }
 
-    // 勤怠詳細画面
+    /**
+     * 勤怠詳細画面
+     */
     public function show(int $id)
     {
         $user = Auth::user();
@@ -256,7 +268,9 @@ class AttendanceController extends Controller
         return view('user.user-detail', compact('user', 'data'));
     }
 
-    // 勤怠修正申請
+    /**
+     * 勤怠修正申請
+     */
     public function requestCorrection(
         AttendanceCorrectionRequest $request,
         int $id
@@ -314,7 +328,9 @@ class AttendanceController extends Controller
         return redirect('/attendance/' . $id);
     }
 
-    // 申請一覧画面
+    /**
+     * 勤怠修正申請一覧画面
+     */
     public function correctionRequestList()
     {
         $user = Auth::user();
