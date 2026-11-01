@@ -9,8 +9,8 @@ class AdminLoginController extends Controller
 {
     /**
      * 管理者ログイン処理
+     * Request $request には、Bladeから送信された情報が入っている
      */
-    // Request $request には、Bladeから送信された情報が入っている
     public function login(Request $request)
     {
         // バリデーション入力値の検証

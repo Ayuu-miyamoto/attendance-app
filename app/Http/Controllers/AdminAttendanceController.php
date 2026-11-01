@@ -74,7 +74,7 @@ class AdminAttendanceController extends Controller
     /**
      * 管理者用勤怠詳細
      */
-    public function show($id)
+    public function show(int $id)
     {
         // 指定された勤怠を休憩情報と一緒に取得する
         $attendance = AttendanceRecord::with('breaks')

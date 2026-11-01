@@ -80,7 +80,7 @@ class AttendanceRecord extends Model
     /**
      * 合計休憩時間を取得するアクセサ（分）
      */
-    public function getTotalBreakMinutesAttribute()
+    public function getTotalBreakMinutesAttribute() : int
     {
         // 紐づく休憩データの時間を合計する
         return $this->breaks->sum(function ($break) {
@@ -118,13 +118,13 @@ class AttendanceRecord extends Model
     /**
      * 分を HH:MM:SS 形式に変換する
      */
-    public function formatMinutes($minutes)
+    public function formatMinutes(int $minutes) : string
     {
         // 時間・分・秒の形式に変換する
         return sprintf(
             '%02d:%02d:00',
-            intdiv((int) $minutes, 60),
-            (int) $minutes % 60
+            intdiv($minutes, 60),
+            $minutes % 60
         );
     }
 
