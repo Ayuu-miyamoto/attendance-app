@@ -147,7 +147,8 @@ return [
         Features::registration(),
         Features::resetPasswords(),
         // Features::emailVerification(),
-        Features::updateProfileInformation(),
+        // メール認証機能を有効にする
+        Features::emailVerification(),
         Features::updatePasswords(),
         Features::twoFactorAuthentication([
             'confirm' => true,

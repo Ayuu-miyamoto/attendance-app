@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -9,8 +10,8 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 
 // Authenticatable: Laravelの認証機能でログインユーザーとして扱えるようにする
-// Modelを継承する場合と異なり、認証に必要な機能も利用できる
-class User extends Authenticatable
+// MustVerifyEmail: メール認証が必要なユーザーとして扱う
+class User extends Authenticatable implements MustVerifyEmail
 {
     // APIトークンの発行・管理機能を使用できるようにする
     use HasApiTokens;

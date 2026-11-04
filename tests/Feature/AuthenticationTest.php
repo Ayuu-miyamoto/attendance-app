@@ -27,6 +27,7 @@ class AuthenticationTest extends TestCase
     // 正しい情報で会員登録できる
     public function test_user_register(): void
     {
+
         $response = $this->post('/register', [
             'name' => 'テストユーザー',
             'email' => 'test@example.com',
