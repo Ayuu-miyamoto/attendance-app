@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -27,34 +29,42 @@ class AttendanceRecord extends Model
     ];
 
     /**
-     * 勤怠記録に紐づくユーザー
+     * 勤怠記録に紐づくユーザーを取得する。
+     *
+     * @return BelongsTo ユーザーとのリレーション
      */
-    public function user()
+    public function user(): BelongsTo
     {
         // 勤怠は1人のユーザーに属する
         return $this->belongsTo(User::class);
     }
 
     /**
-     * 勤怠記録に紐づく休憩記録
+     * 勤怠記録に紐づく休憩記録を取得する。
+     *
+     * @return HasMany 休憩記録とのリレーション
      */
-    public function breaks()
+    public function breaks(): HasMany
     {
         // 1件の勤怠に複数の休憩が紐づく
         return $this->hasMany(AttendanceBreak::class);
     }
 
     /**
-     * 勤怠記録に紐づく修正申請
+     * 勤怠記録に紐づく修正申請を取得する。
+     *
+     * @return HasMany 修正申請とのリレーション
      */
-    public function attendanceCorrects()
+    public function attendanceCorrects(): HasMany
     {
         // 1件の勤怠に複数の修正申請が紐づく
         return $this->hasMany(AttendanceCorrect::class);
     }
 
     /**
-     * 勤怠ステータスを取得する
+     * 勤怠ステータスを取得する。
+     *
+     * @return string 勤務状態
      */
     public function getAttendanceStatus(): string
     {
@@ -78,12 +88,14 @@ class AttendanceRecord extends Model
     }
 
     /**
-     * 合計休憩時間を取得するアクセサ（分）
+     * 休憩時間の合計を分単位で取得する。
+     *
+     * @return int 合計休憩時間（分）
      */
-    public function getTotalBreakMinutesAttribute() : int
+    public function getTotalBreakMinutesAttribute(): int
     {
-        // 紐づく休憩データの時間を合計する
-        return $this->breaks->sum(function ($break) {
+        // 紐づく休憩データの時間を合計して整数で返す
+        return (int) $this->breaks->sum(function (AttendanceBreak $break): int {
 
             // 開始または終了が未登録の場合は計算しない
             if (!$break->break_in || !$break->break_out) {
@@ -97,17 +109,19 @@ class AttendanceRecord extends Model
     }
 
     /**
-     * 合計実働時間を取得するアクセサ（分）
+     * 実働時間を分単位で取得する。
+     *
+     * @return int 合計実働時間（分）
      */
-    public function getTotalWorkMinutesAttribute()
+    public function getTotalWorkMinutesAttribute(): int
     {
         // 出勤または退勤時刻が未登録の場合
         if (!$this->clock_in || !$this->clock_out) {
             return 0;
         }
 
-        // 出勤から退勤までの時間から休憩時間を引く
-        return max(
+        // 出勤から退勤までの時間から休憩時間を引いて整数で返す
+        return (int) max(
             0,
             Carbon::parse($this->clock_in)
                 ->diffInMinutes(Carbon::parse($this->clock_out))
@@ -116,9 +130,12 @@ class AttendanceRecord extends Model
     }
 
     /**
-     * 分を HH:MM:SS 形式に変換する
+     * 分単位の時間をHH:MM:SS形式に変換する。
+     *
+     * @param int $minutes 変換対象の時間（分）
+     * @return string 変換後の時間
      */
-    public function formatMinutes(int $minutes) : string
+    public function formatMinutes(int $minutes): string
     {
         // 時間・分・秒の形式に変換する
         return sprintf(
@@ -129,12 +146,15 @@ class AttendanceRecord extends Model
     }
 
     /**
-     * 管理者による勤怠修正処理
+     * 管理者による勤怠修正を行う。
+     *
+     * @param array $validated バリデーション済みの修正データ
+     * @return void
      */
     public function updateAttendance(array $validated): void
     {
         // 勤怠と休憩をまとめて更新する
-        DB::transaction(function () use ($validated) {
+        DB::transaction(function () use ($validated): void {
 
             // 出勤・退勤時刻を更新する
             $this->update([
@@ -157,31 +177,42 @@ class AttendanceRecord extends Model
                 array_keys($breakOuts)
             ));
 
-            // 休憩データを1件ずつ登録する
-            foreach ($indexes as $index) {
+            // インデックスの配列をCollectionに変換する
+            collect($indexes)
 
-                // 休憩開始時刻を取得する
-                $breakIn = $breakIns[$index] ?? null;
+                // 開始・終了が両方空の休憩データを除外する
+                ->filter(function (int|string $index) use ($breakIns, $breakOuts): bool {
 
-                // 休憩終了時刻を取得する
-                $breakOut = $breakOuts[$index] ?? null;
+                    // 対応する休憩開始時刻を取得する
+                    $breakIn = $breakIns[$index] ?? null;
 
-                // 両方空欄の場合は保存しない
-                if (blank($breakIn) && blank($breakOut)) {
-                    continue;
-                }
+                    // 対応する休憩終了時刻を取得する
+                    $breakOut = $breakOuts[$index] ?? null;
 
-                // 新しい休憩データを登録する
-                $this->breaks()->create([
-                    'break_in' => filled($breakIn)
-                        ? $breakIn . ':00'
-                        : null,
+                    // 開始・終了のどちらかに値があれば残す
+                    return !blank($breakIn) || !blank($breakOut);
+                })
 
-                    'break_out' => filled($breakOut)
-                        ? $breakOut . ':00'
-                        : null,
-                ]);
-            }
+                // 残った休憩データを1件ずつ登録する
+                ->each(function (int|string $index) use ($breakIns, $breakOuts): void {
+
+                    // 対応する休憩開始時刻を取得する
+                    $breakIn = $breakIns[$index] ?? null;
+
+                    // 対応する休憩終了時刻を取得する
+                    $breakOut = $breakOuts[$index] ?? null;
+
+                    // 新しい休憩データを登録する
+                    $this->breaks()->create([
+                        'break_in' => filled($breakIn)
+                            ? $breakIn . ':00'
+                            : null,
+
+                        'break_out' => filled($breakOut)
+                            ? $breakOut . ':00'
+                            : null,
+                    ]);
+                });
         });
     }
 }

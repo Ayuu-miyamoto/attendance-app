@@ -6,15 +6,21 @@ use App\Http\Requests\AttendanceCorrectionRequest;
 use App\Models\AttendanceCorrect;
 use App\Models\AttendanceRecord;
 use App\Models\User;
+use App\Models\AttendanceBreak;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\View\View;
+use Illuminate\Http\RedirectResponse;
 
 class AdminAttendanceController extends Controller
 {
     /**
-     * 管理者用勤怠一覧
+     * 管理者用の日次勤怠一覧画面を表示する。
+     *
+     * @param Request $request 表示対象の日付を含むリクエスト
+     * @return View 管理者用勤怠一覧画面
      */
-    public function index(Request $request)
+    public function index(Request $request): View
     {
         // 表示対象の日付を取得する
         $date = $request->date
@@ -39,8 +45,8 @@ class AdminAttendanceController extends Controller
             ->whereDate('date', $date)
             ->get();
 
-        // 勤怠データごとに表示用の時間を設定する
-        foreach ($attendanceRecords as $attendance) {
+        // Collectionのeachで勤怠データを1件ずつ処理する
+        $attendanceRecords->each(function (AttendanceRecord $attendance): void {
 
             // Modelのアクセサから休憩時間を取得する
             $breakMinutes = $attendance->total_break_minutes;
@@ -59,7 +65,7 @@ class AdminAttendanceController extends Controller
                 $attendance->total_time = Carbon::createFromTime(0, 0)
                     ->addMinutes($workMinutes);
             }
-        }
+        });
 
         // 管理者用勤怠一覧画面を表示する
         return view('admin.admin-attendance-list', compact(
@@ -72,9 +78,12 @@ class AdminAttendanceController extends Controller
     }
 
     /**
-     * 管理者用勤怠詳細
+     * 指定された勤怠の詳細画面を表示する。
+     *
+     * @param int $id 勤怠レコードのID
+     * @return View 管理者用勤怠詳細画面
      */
-    public function show(int $id)
+    public function show(int $id): View
     {
         // 指定された勤怠を休憩情報と一緒に取得する
         $attendance = AttendanceRecord::with('breaks')
@@ -84,7 +93,7 @@ class AdminAttendanceController extends Controller
         $user = $attendance->user;
 
         // 休憩データを表示用の配列に変換する
-        $breaks = $attendance->breaks->map(function ($break) {
+        $breaks = $attendance->breaks->map(function (AttendanceBreak $break): array {
 
             // 休憩開始・終了時刻を整形する
             return [
@@ -130,12 +139,16 @@ class AdminAttendanceController extends Controller
     }
 
     /**
-     * 管理者による勤怠修正
+     * 管理者が勤怠情報を修正する。
+     *
+     * @param AttendanceCorrectionRequest $request バリデーション済みの修正内容
+     * @param int $id 修正対象の勤怠レコードID
+     * @return RedirectResponse 勤怠詳細画面へのリダイレクト
      */
     public function update(
         AttendanceCorrectionRequest $request,
         int $id
-    ) {
+    ): RedirectResponse {
         // 指定された勤怠データを取得する
         $attendance = AttendanceRecord::findOrFail($id);
 
@@ -147,9 +160,11 @@ class AdminAttendanceController extends Controller
     }
 
     /**
-     * 管理者用修正申請一覧
+     * 管理者用の勤怠修正申請一覧画面を表示する。
+     *
+     * @return View 修正申請一覧画面
      */
-    public function applicationList()
+    public function applicationList(): View
     {
         // 修正申請を関連データと一緒に取得する
         $applications = AttendanceCorrect::withCorrectionDetails()
@@ -167,9 +182,12 @@ class AdminAttendanceController extends Controller
     }
 
     /**
-     * 修正申請詳細
+     * 指定された勤怠修正申請の詳細画面を表示する。
+     *
+     * @param int $id 修正申請のID
+     * @return View 修正申請詳細画面
      */
-    public function showApplication($id)
+    public function showApplication(int $id): View
     {
         // 指定された修正申請を関連データと一緒に取得する
         $application = AttendanceCorrect::with([
@@ -188,9 +206,12 @@ class AdminAttendanceController extends Controller
     }
 
     /**
-     * 修正申請の承認処理
+     * 指定された勤怠修正申請を承認する
+     *
+     * @param int $id 修正申請のID
+     * @return RedirectResponse 承認画面へのリダイレクト
      */
-    public function approveApplication($id)
+    public function approveApplication(int $id): RedirectResponse
     {
         // 指定された修正申請を取得する
         $application = AttendanceCorrect::findOrFail($id);

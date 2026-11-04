@@ -6,19 +6,30 @@ use App\Models\User;
 use App\Models\AttendanceRecord;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\View\View;
 
 class StaffController extends Controller
 {
-    // スタッフ一覧
-    public function index()
+    /**
+     * 管理者用のスタッフ一覧画面を表示する。
+     *
+     * @return View スタッフ一覧画面
+     */
+    public function index(): View
     {
         $users = User::orderBy('id')->get();
 
         return view('admin.staff-list', compact('users'));
     }
 
-    // スタッフ別勤怠一覧
-    public function show(Request $request, $id)
+    /**
+     * 指定されたスタッフの月次勤怠一覧画面を表示する。
+     *
+     * @param Request $request 表示対象の年月を含むリクエスト
+     * @param int $id スタッフのユーザーID
+     * @return View スタッフ別勤怠一覧画面
+     */
+    public function show(Request $request, int $id): View
     {
         $user = User::findOrFail($id);
 
@@ -38,7 +49,7 @@ class StaffController extends Controller
             ->orderBy('date')
             ->get();
 
-        $formattedAttendanceRecords = $records->map(function ($record) {
+        $formattedAttendanceRecords = $records->map(function (AttendanceRecord $record): array {
             $recordDate = Carbon::parse($record->date);
 
             return [

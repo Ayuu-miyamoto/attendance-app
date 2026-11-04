@@ -4,14 +4,17 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Http\RedirectResponse;
 
 class AdminLoginController extends Controller
 {
     /**
-     * 管理者ログイン処理
-     * Request $request には、Bladeから送信された情報が入っている
+     * 管理者のログイン処理を行う
+     *
+     * @param Request $request Bladeから送信されたログイン情報
+     * @return RedirectResponse ログイン成功時または失敗時のリダイレクト
      */
-    public function login(Request $request)
+    public function login(Request $request): RedirectResponse
     {
         // バリデーション入力値の検証
         $credentials = $request->validate([
