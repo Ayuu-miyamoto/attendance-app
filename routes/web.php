@@ -4,6 +4,7 @@ use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\AdminAttendanceController;
 use App\Http\Controllers\StaffController;
 use App\Models\AttendanceCorrect;
+use App\Models\User;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
 use Laravel\Fortify\Http\Controllers\AuthenticatedSessionController;
@@ -26,7 +27,6 @@ Route::get('/login', function () {
 Route::get('/attendance', [
     AttendanceController::class,
     'index',
-// ログイン済み、かつメール認証済みのユーザーだけアクセスを許可する
 ])->middleware(['auth:web', 'verified']);
 
 // 出勤・退勤・休憩の打刻処理
@@ -71,6 +71,15 @@ Route::post('/attendance/{id}', function (int $id) {
     // 一般ユーザーとしてログインしている場合
     if (Auth::guard('web')->check()) {
 
+        // ログイン中のユーザーをUserモデルとして取得する
+        /** @var User $user */
+        $user = Auth::guard('web')->user();
+
+        // メール認証が完了していない場合は認証案内画面へ移動する
+        if (! $user->hasVerifiedEmail()) {
+            return redirect()->route('verification.notice');
+        }
+
         // 一般ユーザーガードを使用する
         Auth::shouldUse('web');
 
@@ -108,6 +117,15 @@ Route::get('/stamp_correction_request/list', function () {
     // 一般ユーザーとしてログインしている場合
     if (Auth::guard('web')->check()) {
 
+        // ログイン中のユーザーをUserモデルとして取得する
+        /** @var User $user */
+        $user = Auth::guard('web')->user();
+
+        // メール認証が完了していない場合は認証案内画面へ移動する
+        if (! $user->hasVerifiedEmail()) {
+            return redirect()->route('verification.notice');
+        }
+
         // 一般ユーザーガードを使用する
         Auth::shouldUse('web');
 
@@ -123,20 +141,29 @@ Route::get('/stamp_correction_request/list', function () {
 // 修正申請の詳細画面への振り分け
 Route::get('/application/{id}', function (int $id) {
 
-    // 修正申請データを取得する
-    $application = AttendanceCorrect::findOrFail($id);
-
     // 管理者としてログインしている場合
     if (Auth::guard('admin')->check()) {
 
         // 管理者の申請承認画面へ移動する
         return redirect(
-            '/stamp_correction_request/approve/' . $application->id
+            '/stamp_correction_request/approve/' . $id
         );
     }
 
     // 一般ユーザーとしてログインしている場合
     if (Auth::guard('web')->check()) {
+
+        // ログイン中のユーザーをUserモデルとして取得する
+        /** @var User $user */
+        $user = Auth::guard('web')->user();
+
+        // メール認証が完了していない場合は認証案内画面へ移動する
+        if (! $user->hasVerifiedEmail()) {
+            return redirect()->route('verification.notice');
+        }
+
+        // 修正申請データを取得する
+        $application = AttendanceCorrect::findOrFail($id);
 
         // 自分の勤怠に対する申請か確認する
         $attendance = $application->attendanceRecord;
