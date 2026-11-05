@@ -35,8 +35,8 @@ class AuthenticationTest extends TestCase
             'password_confirmation' => 'password123',
         ]);
 
-        // 登録後、/attendance にリダイレクトされることを確認する
-        $response->assertRedirect('/attendance');
+        // 登録後、メール認証画面へリダイレクトされることを確認する
+        $response->assertRedirect(route('verification.notice'));
 
         // データベースに登録されていることを確認する
         $this->assertDatabaseHas('users', [

@@ -26,25 +26,26 @@ Route::get('/login', function () {
 Route::get('/attendance', [
     AttendanceController::class,
     'index',
-])->middleware('auth:web');
+// ログイン済み、かつメール認証済みのユーザーだけアクセスを許可する
+])->middleware(['auth:web', 'verified']);
 
 // 出勤・退勤・休憩の打刻処理
 Route::post('/attendance', [
     AttendanceController::class,
     'store',
-])->middleware('auth:web');
+])->middleware(['auth:web', 'verified']);
 
 // 一般ユーザーの勤怠一覧画面
 Route::get('/attendance/list', [
     AttendanceController::class,
     'list',
-])->middleware('auth:web');
+])->middleware(['auth:web', 'verified']);
 
 // 一般ユーザーの勤怠詳細画面
 Route::get('/attendance/{id}', [
     AttendanceController::class,
     'show',
-])->middleware('auth:web')->whereNumber('id');
+])->middleware(['auth:web', 'verified'])->whereNumber('id');
 
 
 // ==================================================================================

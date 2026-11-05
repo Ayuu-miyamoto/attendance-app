@@ -31,6 +31,17 @@ class FortifyServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {   
+        // 会員登録後のレスポンスを独自のクラスに変更する
+        $this->app->singleton(
+            \Laravel\Fortify\Contracts\RegisterResponse::class,
+            \App\Http\Responses\RegisterResponse::class
+        );
+        
+        // メール認証が必要なユーザーに表示する画面を指定する
+        Fortify::verifyEmailView(function () {
+            // 既存のメール認証画面を表示する
+            return view('auth.verify-email');
+        });
         Fortify::createUsersUsing(CreateNewUser::class);
         Fortify::updateUserProfileInformationUsing(UpdateUserProfileInformation::class);
         Fortify::updateUserPasswordsUsing(UpdateUserPassword::class);
