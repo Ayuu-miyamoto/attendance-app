@@ -4,9 +4,13 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\IndexAttendanceRecordRequest;
+use App\Http\Requests\Api\V1\UpdateAttendanceRecordRequest;
 use App\Http\Resources\AttendanceRecordResource;
 use App\Models\AttendanceRecord;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Auth\Access\AuthorizationException;
+use App\Http\Requests\Api\V1\StoreAttendanceRecordRequest;
 
 class AttendanceRecordController extends Controller
 {
@@ -75,6 +79,93 @@ class AttendanceRecordController extends Controller
 
         // 勤怠詳細をResourceでJSON形式に変換して返す
         return new AttendanceRecordResource($attendanceRecord);
+    }
+    
+    /**
+     * 勤怠データを新規登録する。
+     *
+     * @param StoreAttendanceRecordRequest $request バリデーション済みの登録情報
+     * @return JsonResponse 登録した勤怠情報
+     */
+    public function store(StoreAttendanceRecordRequest $request): JsonResponse
+    {
+        // バリデーション済みのデータを取得する
+        $validated = $request->validated();
+
+        // 認証済みユーザーに紐づけて勤怠データを登録する
+        $attendanceRecord = $request->user()
+            ->attendanceRecords()
+            ->create($validated);
+
+        // 登録した勤怠に関連するユーザーと休憩情報を取得する
+        $attendanceRecord->load(['user', 'breaks']);
+
+        // 登録した勤怠データをJSON形式で返し、HTTPステータス201を設定する
+        return (new AttendanceRecordResource($attendanceRecord))
+            ->response()
+            ->setStatusCode(201);
+    }
+
+    /**
+     * 指定された勤怠データを更新する。
+     *
+     * @param UpdateAttendanceRecordRequest $request バリデーション済みの更新情報
+     * @param AttendanceRecord $attendanceRecord 更新対象の勤怠記録
+     * @return AttendanceRecordResource|JsonResponse 更新後の勤怠情報またはエラーレスポンス
+     */
+    public function update(
+        UpdateAttendanceRecordRequest $request,
+        AttendanceRecord $attendanceRecord
+    ): AttendanceRecordResource|JsonResponse {
+
+        // Policyによる認可エラーを捕捉する
+        try {
+            // Policyを使用して更新権限を確認する
+            $this->authorize('update', $attendanceRecord);
+        } catch (AuthorizationException $e) {
+            // 権限がない場合は仕様書どおりのJSONを返す
+            return response()->json([
+                'error' => 'この操作を実行する権限がありません。',
+            ], 403);
+        }
+
+        // バリデーション済みの更新データを取得する
+        $validated = $request->validated();
+
+        // 勤怠データを更新する
+        $attendanceRecord->update($validated);
+
+        // 更新後のユーザーと休憩データを取得する
+        $attendanceRecord->load(['user', 'breaks']);
+
+        // 更新した勤怠情報をResourceでJSON形式に変換して返す
+        return new AttendanceRecordResource($attendanceRecord);
+    }
+
+    /**
+     * 指定された勤怠データを削除する。
+     *
+     * @param AttendanceRecord $attendanceRecord 削除対象の勤怠記録
+     * @return JsonResponse 削除結果のレスポンス
+     */
+    public function destroy(AttendanceRecord $attendanceRecord): JsonResponse
+    {
+        // Policyによる認可エラーを捕捉する
+        try {
+            // Policyを使用して削除権限を確認する
+            $this->authorize('delete', $attendanceRecord);
+        } catch (AuthorizationException $e) {
+            // 権限がない場合は仕様書どおりのJSONを返す
+            return response()->json([
+                'error' => 'この操作を実行する権限がありません。',
+            ], 403);
+        }
+
+        // 指定された勤怠データを削除する
+        $attendanceRecord->delete();
+
+        // 削除成功時はレスポンスボディなしでHTTPステータス204を返す
+        return response()->json(null, 204);
     }
 
 }

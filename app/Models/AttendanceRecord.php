@@ -29,6 +29,18 @@ class AttendanceRecord extends Model
     ];
 
     /**
+     * 勤怠日をYYYY-MM-DD形式で保存する。
+     *
+     * @param string|\DateTimeInterface $value 設定する勤怠日
+     * @return void
+     */
+    public function setDateAttribute($value): void
+    {
+        // 勤怠日を日付のみの形式に統一する
+        $this->attributes['date'] = Carbon::parse($value)->format('Y-m-d');
+    }
+    
+    /**
      * 勤怠記録に紐づくユーザーを取得する。
      *
      * @return BelongsTo ユーザーとのリレーション
@@ -177,42 +189,31 @@ class AttendanceRecord extends Model
                 array_keys($breakOuts)
             ));
 
-            // インデックスの配列をCollectionに変換する
-            collect($indexes)
+            // 休憩データを1件ずつ登録する
+            foreach ($indexes as $index) {
 
-                // 開始・終了が両方空の休憩データを除外する
-                ->filter(function (int|string $index) use ($breakIns, $breakOuts): bool {
+                // 休憩開始時刻を取得する
+                $breakIn = $breakIns[$index] ?? null;
 
-                    // 対応する休憩開始時刻を取得する
-                    $breakIn = $breakIns[$index] ?? null;
+                // 休憩終了時刻を取得する
+                $breakOut = $breakOuts[$index] ?? null;
 
-                    // 対応する休憩終了時刻を取得する
-                    $breakOut = $breakOuts[$index] ?? null;
+                // 両方空欄の場合は保存しない
+                if (blank($breakIn) && blank($breakOut)) {
+                    continue;
+                }
 
-                    // 開始・終了のどちらかに値があれば残す
-                    return !blank($breakIn) || !blank($breakOut);
-                })
+                // 新しい休憩データを登録する
+                $this->breaks()->create([
+                    'break_in' => filled($breakIn)
+                        ? $breakIn . ':00'
+                        : null,
 
-                // 残った休憩データを1件ずつ登録する
-                ->each(function (int|string $index) use ($breakIns, $breakOuts): void {
-
-                    // 対応する休憩開始時刻を取得する
-                    $breakIn = $breakIns[$index] ?? null;
-
-                    // 対応する休憩終了時刻を取得する
-                    $breakOut = $breakOuts[$index] ?? null;
-
-                    // 新しい休憩データを登録する
-                    $this->breaks()->create([
-                        'break_in' => filled($breakIn)
-                            ? $breakIn . ':00'
-                            : null,
-
-                        'break_out' => filled($breakOut)
-                            ? $breakOut . ':00'
-                            : null,
-                    ]);
-                });
+                    'break_out' => filled($breakOut)
+                        ? $breakOut . ':00'
+                        : null,
+                ]);
+            }
         });
     }
 }
