@@ -18,10 +18,13 @@ Route::get('/register', function () {
     return view('user.register');
 });
 
-// 一般ユーザーのログイン画面
+// 一般ユーザーのログイン画面を表示する
 Route::get('/login', function () {
+
+    // ログイン画面のBladeを返す
     return view('user.user-login');
-});
+
+})->name('login');
 
 // 勤怠打刻画面
 Route::get('/attendance', [
@@ -41,16 +44,47 @@ Route::get('/attendance/list', [
     'list',
 ])->middleware(['auth:web', 'verified']);
 
-// 一般ユーザーの勤怠詳細画面
-Route::get('/attendance/{id}', [
-    AttendanceController::class,
-    'show',
-])->middleware(['auth:web', 'verified'])->whereNumber('id');
-
 
 // ==================================================================================
 // 一般ユーザー・管理者共通
 // ==================================================================================
+
+// 一般ユーザー・管理者共通の勤怠詳細画面
+Route::get('/attendance/{id}', function (int $id) {
+
+    // 管理者としてログインしている場合
+    if (Auth::guard('admin')->check()) {
+
+        // 管理者ガードを使用する
+        Auth::shouldUse('admin');
+
+        // 管理者用の勤怠詳細画面を表示する
+        return app(AdminAttendanceController::class)->show($id);
+    }
+
+    // 一般ユーザーとしてログインしている場合
+    if (Auth::guard('web')->check()) {
+
+        // ログイン中のユーザーをUserモデルとして取得する
+        /** @var User $user */
+        $user = Auth::guard('web')->user();
+
+        // メール認証が完了していない場合は認証案内画面へ移動する
+        if (! $user->hasVerifiedEmail()) {
+            return redirect()->route('verification.notice');
+        }
+
+        // 一般ユーザーガードを使用する
+        Auth::shouldUse('web');
+
+        // 一般ユーザー用の勤怠詳細画面を表示する
+        return app(AttendanceController::class)->show($id);
+    }
+
+    // 未ログインの場合はログイン画面へ移動する
+    return redirect('/login');
+
+})->whereNumber('id');
 
 // 勤怠修正処理
 Route::post('/attendance/{id}', function (int $id) {
@@ -242,3 +276,9 @@ Route::get('/admin/attendance/staff/{id}', [
     StaffController::class,
     'show',
 ])->middleware('admin')->whereNumber('id');
+
+// 管理者用CSV出力
+Route::post('/export', [
+    StaffController::class,
+    'export',
+])->middleware('admin');

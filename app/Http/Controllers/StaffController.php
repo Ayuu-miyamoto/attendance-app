@@ -79,4 +79,49 @@ class StaffController extends Controller
             'formattedAttendanceRecords'
         ));
     }
+
+    /**
+     * スタッフの月次勤怠をCSVで出力する。
+     */
+    public function export(Request $request)
+    {
+        // 入力されたスタッフIDと対象年月を検証する
+        $validated = $request->validate([
+            'user_id' => ['required', 'integer', 'exists:users,id'],
+            'year_month' => ['required', 'date_format:Y-m'],
+        ]);
+
+        // Modelから対象月の勤怠を取得する
+        $records = AttendanceRecord::getMonthlyRecords(
+            $validated['user_id'],
+            $validated['year_month']
+        );
+
+        // CSVのファイル名を設定する
+        $fileName = "attendance_{$validated['user_id']}_{$validated['year_month']}.csv";
+
+        // CSVファイルをダウンロードする
+        return response()->streamDownload(function () use ($records) {
+
+            // CSVの出力先を開く
+            $stream = fopen('php://output', 'w');
+
+            // Excelで日本語が文字化けしないようにする
+            fwrite($stream, "\xEF\xBB\xBF");
+
+            // CSVの見出しを出力する
+            fputcsv($stream, ['日付', '出勤', '退勤', '休憩', '合計']);
+
+            // 勤怠情報をCSVに出力する
+            foreach ($records as $record) {
+                fputcsv($stream, $record->toCsvRow());
+            }
+
+            // 出力先を閉じる
+            fclose($stream);
+
+        }, $fileName, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+        ]);
+    }
 }

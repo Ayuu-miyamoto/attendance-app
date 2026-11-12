@@ -216,4 +216,50 @@ class AttendanceRecord extends Model
             }
         });
     }
+
+    /**
+     * CSV：指定スタッフの月次勤怠を取得する
+     */
+    public static function getMonthlyRecords(int $userId, string $yearMonth)
+    {
+        // 対象月の月初を取得する
+        $date = Carbon::createFromFormat('!Y-m', $yearMonth);
+
+        // 指定スタッフの対象月の勤怠を取得する
+        return self::with('breaks')
+            ->where('user_id', $userId)
+            ->whereBetween('date', [
+                $date->copy()->startOfMonth()->toDateString(),
+                $date->copy()->endOfMonth()->toDateString(),
+            ])
+            ->orderBy('date')
+            ->get();
+    }
+
+    /**
+     * 勤怠情報をCSV出力用の配列に変換する。
+     */
+    public function toCsvRow(): array
+    {
+        // CSVに出力する勤怠情報を返す
+        return [
+            $this->date->format('Y/m/d'),
+
+            $this->clock_in
+                ? Carbon::parse($this->clock_in)->format('H:i')
+                : '',
+
+            $this->clock_out
+                ? Carbon::parse($this->clock_out)->format('H:i')
+                : '',
+
+            $this->breaks->isNotEmpty()
+                ? $this->formatMinutes($this->total_break_minutes)
+                : '',
+
+            $this->clock_in && $this->clock_out
+                ? $this->formatMinutes($this->total_work_minutes)
+                : '',
+        ];
+    }
 }
