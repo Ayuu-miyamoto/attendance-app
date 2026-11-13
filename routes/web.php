@@ -3,6 +3,7 @@
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\AdminAttendanceController;
 use App\Http\Controllers\StaffController;
+use App\Http\Controllers\AttendanceReportController;
 use App\Models\AttendanceCorrect;
 use App\Models\User;
 use Illuminate\Support\Facades\Route;
@@ -42,6 +43,18 @@ Route::post('/attendance', [
 Route::get('/attendance/list', [
     AttendanceController::class,
     'list',
+])->middleware(['auth:web', 'verified']);
+
+// 一般ユーザーの勤怠一覧画面
+Route::get('/attendance/list', [
+    AttendanceController::class,
+    'list',
+])->middleware(['auth:web', 'verified']);
+
+// マイ勤怠レポート画面
+Route::get('/attendance/report', [
+    AttendanceReportController::class,
+    'index',
 ])->middleware(['auth:web', 'verified']);
 
 

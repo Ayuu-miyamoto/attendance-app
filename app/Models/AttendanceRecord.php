@@ -6,7 +6,8 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Support\Carbon;
+use Carbon\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 class AttendanceRecord extends Model
@@ -260,6 +261,121 @@ class AttendanceRecord extends Model
             $this->clock_in && $this->clock_out
                 ? $this->formatMinutes($this->total_work_minutes)
                 : '',
+        ];
+    }
+
+
+    // ログインユーザーの過去6ヶ月の勤怠レポートを取得する
+    public static function getReportData(int $userId): array
+    {
+        // 今月の月初を取得する
+        $currentMonth = Carbon::today()->startOfMonth();
+
+        // 過去6ヶ月の勤怠を休憩情報と一緒に取得する
+        $records = self::with('breaks')
+            ->where('user_id', $userId)
+            ->whereBetween('date', [
+                $currentMonth->copy()->subMonths(5)->toDateString(),
+                $currentMonth->copy()->endOfMonth()->toDateString(),
+            ])
+            ->get();
+
+        // 出勤と退勤の両方が登録されている勤怠を取得する
+        $completed = $records->filter(fn ($record) =>
+            $record->clock_in && $record->clock_out
+        );
+
+        // 基本サマリーを計算する
+        $summary = self::getReportSummary($completed);
+
+        // 月次推移を計算する
+        $monthlyTrend = self::getMonthlyTrend($completed, $currentMonth);
+
+        // 今月の異常検知を計算する
+        $anomalies = self::getReportAnomalies(
+            $records->filter(fn ($record) =>
+                $record->date->format('Y-m') === $currentMonth->format('Y-m')
+            )
+        );
+
+        // Bladeで使用する3つの集計結果を返す
+        return compact('summary', 'monthlyTrend', 'anomalies');
+    }
+
+    // 基本サマリーを集計する
+    private static function getReportSummary(Collection $records): array
+    {
+        // 実労働時間を合計する
+        $total = (int) $records->sum('total_work_minutes');
+
+        // 1日8時間を超えた残業時間を合計する
+        $overtime = (int) $records->sum(fn ($record) =>
+            max(0, $record->total_work_minutes - 480)
+        );
+
+        // 出退勤が完了した日数を取得する
+        $days = $records->count();
+
+        // 集計結果を返す
+        return [
+            'total_work_minutes' => $total,
+            'total_overtime_minutes' => $overtime,
+            'avg_work_minutes' => $days ? (int) floor($total / $days) : 0,
+        ];
+    }
+
+    // 過去6ヶ月の月次推移を集計する
+    private static function getMonthlyTrend(Collection $records, Carbon $currentMonth): Collection
+    {
+        // 勤怠データを年月ごとに分類する
+        $grouped = $records->groupBy(fn ($record) =>
+            $record->date->format('Y-m')
+        );
+
+        // 5ヶ月前から今月までの6ヶ月分を作成する
+        return collect(range(5, 0))->map(function ($monthsAgo) use ($grouped, $currentMonth) {
+
+            // 対象年月を取得する
+            $month = $currentMonth->copy()->subMonths($monthsAgo)->format('Y-m');
+
+            // 対象月の勤怠を取得する
+            $monthlyRecords = $grouped->get($month, collect());
+
+            // 月ごとの集計結果を返す
+            return [
+                'month' => $month,
+                'work_minutes' => (int) $monthlyRecords->sum('total_work_minutes'),
+                'overtime_minutes' => (int) $monthlyRecords->sum(fn ($record) =>
+                    max(0, $record->total_work_minutes - 480)
+                ),
+            ];
+        });
+    }
+
+    // 今月の遅刻・早退・長時間労働を集計する
+    private static function getReportAnomalies(Collection $records): array
+    {
+        // 異常検知の集計結果を返す
+        return [
+            // 9時より後の出勤を遅刻として数える
+            'late_count' => $records->filter(fn ($record) =>
+                $record->clock_in &&
+                Carbon::parse($record->clock_in)->format('H:i:s') > '09:00:00'
+            )->count(),
+
+            // 18時より前の退勤を早退として数える
+            'early_leave_count' => $records->filter(fn ($record) =>
+                $record->clock_in &&
+                $record->clock_out &&
+                Carbon::parse($record->clock_out)->format('H:i:s') < '18:00:00'
+            )->count(),
+
+            // 実労働時間が10時間を超えた日を数える
+            'long_work_count' => $records->filter(fn ($record) =>
+                $record->clock_in &&
+                $record->clock_out &&
+                $record->total_work_minutes > 600
+            )->count(),
         ];
     }
 }
