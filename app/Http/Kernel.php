@@ -36,6 +36,9 @@ class Kernel extends HttpKernel
             \Illuminate\View\Middleware\ShareErrorsFromSession::class,
             \App\Http\Middleware\VerifyCsrfToken::class,
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
+
+            // ログアウト前に管理者かどうかを記録する
+            \App\Http\Middleware\RememberLogoutRole::class,
         ],
 
         'api' => [

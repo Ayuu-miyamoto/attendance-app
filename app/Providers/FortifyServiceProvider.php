@@ -30,38 +30,70 @@ class FortifyServiceProvider extends ServiceProvider
      * Bootstrap any application services.
      */
     public function boot(): void
-    {   
-        // 会員登録後のレスポンスを独自のクラスに変更する
+    {
+        // ログアウト後のリダイレクト処理を独自クラスに変更する
+        $this->app->singleton(
+            \Laravel\Fortify\Contracts\LogoutResponse::class,
+            \App\Http\Responses\LogoutResponse::class
+        );
+
+        // 会員登録後のレスポンスを独自クラスに変更する
         $this->app->singleton(
             \Laravel\Fortify\Contracts\RegisterResponse::class,
             \App\Http\Responses\RegisterResponse::class
         );
-        
+
         // メール認証が必要なユーザーに表示する画面を指定する
         Fortify::verifyEmailView(function () {
             // 既存のメール認証画面を表示する
             return view('auth.verify-email');
         });
+
+        // 会員登録処理を設定する
         Fortify::createUsersUsing(CreateNewUser::class);
+
+        // プロフィール更新処理を設定する
         Fortify::updateUserProfileInformationUsing(UpdateUserProfileInformation::class);
+
+        // パスワード更新処理を設定する
         Fortify::updateUserPasswordsUsing(UpdateUserPassword::class);
+
+        // パスワードリセット処理を設定する
         Fortify::resetUserPasswordsUsing(ResetUserPassword::class);
-        Fortify::redirectUserForTwoFactorAuthenticationUsing(RedirectIfTwoFactorAuthenticatable::class);
 
+        // 二段階認証のリダイレクト処理を設定する
+        Fortify::redirectUserForTwoFactorAuthenticationUsing(
+            RedirectIfTwoFactorAuthenticatable::class
+        );
+
+        // ログインの試行回数を制限する
         RateLimiter::for('login', function (Request $request) {
-            $throttleKey = Str::transliterate(Str::lower($request->input(Fortify::username())).'|'.$request->ip());
 
+            // メールアドレスとIPアドレスから識別キーを作成する
+            $throttleKey = Str::transliterate(
+                Str::lower($request->input(Fortify::username())).'|'.$request->ip()
+            );
+
+            // 1分間に5回まで許可する
             return Limit::perMinute(5)->by($throttleKey);
         });
 
+        // 二段階認証の試行回数を制限する
         RateLimiter::for('two-factor', function (Request $request) {
-            return Limit::perMinute(5)->by($request->session()->get('login.id'));
+
+            // セッション内のログインIDを使って制限する
+            return Limit::perMinute(5)->by(
+                $request->session()->get('login.id')
+            );
         });
 
+        // Fortifyのログイン認証処理を設定する
         Fortify::authenticateThrough(function (Request $request) {
+
+            // 認証処理を順番に実行する
             return array_filter([
                 \Laravel\Fortify\Actions\EnsureLoginIsNotThrottled::class,
-                \Laravel\Fortify\Actions\RedirectIfTwoFactorAuthenticatable::class,
+                RedirectIfTwoFactorAuthenticatable::class,
                 AuthenticateAdmin::class,
                 AttemptToAuthenticate::class,
                 \Laravel\Fortify\Actions\PrepareAuthenticatedSession::class,

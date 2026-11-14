@@ -248,6 +248,23 @@ Route::post('/admin/login', [
     'store',
 ]);
 
+// 管理者ログアウト
+Route::post('/admin/logout', function () {
+
+    // webガードからログアウトする
+    Auth::guard('web')->logout();
+
+    // セッションを無効化する
+    request()->session()->invalidate();
+
+    // CSRFトークンを再生成する
+    request()->session()->regenerateToken();
+
+    // 管理者ログイン画面へリダイレクトする
+    return redirect('/admin/login');
+
+})->middleware('admin');
+
 // 管理者の勤怠一覧画面
 Route::get('/admin/attendance/list', [
     AdminAttendanceController::class,
