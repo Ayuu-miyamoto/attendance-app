@@ -1,66 +1,284 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# COACHTECH 勤怠管理アプリ
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+一般ユーザーが出勤・退勤・休憩の打刻、勤怠一覧の確認、勤怠修正申請を行えるアプリ。
 
-## About Laravel
+管理者はスタッフの勤怠情報の確認、勤怠修正申請の承認、スタッフ別の月次勤怠データのCSV出力を行うことができる。
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## 作成者
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+宮本 歩優
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+## 使用技術
 
-## Learning Laravel
+- Laravel Framework 10.50.3
+- PHP 8.5.10
+- MySQL 8.4.11
+- Composer 2.10.1
+- Laravel Sail
+- Docker Desktop
+- Laravel Fortify
+- Vite
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+## ER図
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+```mermaid
+erDiagram
+    users ||--o{ attendance_records : "has many"
+    attendance_records ||--o{ breaks : "has many"
+    attendance_records ||--o{ attendance_corrects : "has many"
+    attendance_corrects ||--o{ break_correct_applications : "has many"
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+    users {
+        bigint_unsigned id PK
+        varchar_255 name
+        varchar_255 email UK
+        timestamp email_verified_at
+        varchar_255 password
+        varchar_100 remember_token
+        timestamp created_at
+        timestamp updated_at
+        boolean admin_status
+    }
 
-## Laravel Sponsors
+    attendance_records {
+        bigint_unsigned id PK
+        bigint_unsigned user_id FK
+        date date
+        time clock_in
+        time clock_out
+        timestamp created_at
+        timestamp updated_at
+        text comment
+    }
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+    breaks {
+        bigint_unsigned id PK
+        bigint_unsigned attendance_record_id FK
+        time break_in
+        time break_out
+        timestamp created_at
+        timestamp updated_at
+    }
 
-### Premium Partners
+    attendance_corrects {
+        bigint_unsigned id PK
+        bigint_unsigned attendance_record_id FK
+        time clock_in
+        time clock_out
+        varchar_255 comment
+        boolean approval_status
+        timestamp requested_at
+        timestamp approved_at
+        timestamp created_at
+        timestamp updated_at
+    }
 
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[WebReinvent](https://webreinvent.com/)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel/)**
-- **[Cyber-Duck](https://cyber-duck.co.uk)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Jump24](https://jump24.co.uk)**
-- **[Redberry](https://redberry.international/laravel/)**
-- **[Active Logic](https://activelogic.com)**
-- **[byte5](https://byte5.de)**
-- **[OP.GG](https://op.gg)**
+    break_correct_applications {
+        bigint_unsigned id PK
+        bigint_unsigned attendance_correct_id FK
+        time break_in
+        time break_out
+        timestamp created_at
+        timestamp updated_at
+    }
+```
 
-## Contributing
+## 開発環境URL
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+一般ユーザーログイン画面
 
-## Code of Conduct
+http://localhost/login
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+管理者ログイン画面
 
-## Security Vulnerabilities
+http://localhost/admin/login
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+phpMyAdmin
 
-## License
+http://localhost:8081
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+Mailpit（メール確認）
+
+http://localhost:8025
+
+※URLは `compose.yaml` のデフォルトポート設定に基づいています。
+
+## 動作環境
+
+- Docker Desktopがインストールされたパソコン
+- Git
+- PHP 8.5系
+- Composer 2系
+
+## 環境構築手順
+
+### 1. リポジトリをクローン
+
+```bash
+git clone https://github.com/Ayuu-miyamoto/attendance-app.git
+```
+
+### 2. プロジェクトディレクトリに移動
+
+```bash
+cd attendance-app
+```
+
+### 3. .envファイルの準備
+
+```bash
+cp .env.example .env
+```
+
+`.env` のデータベース接続設定を以下のように変更する。
+
+```env
+DB_CONNECTION=mysql
+DB_HOST=mysql
+DB_PORT=3306
+DB_DATABASE=laravel
+DB_USERNAME=sail
+DB_PASSWORD=password
+```
+
+メール送信設定は以下を使用する。
+
+```env
+MAIL_MAILER=smtp
+MAIL_HOST=mailpit
+MAIL_PORT=1025
+MAIL_USERNAME=null
+MAIL_PASSWORD=null
+MAIL_ENCRYPTION=null
+```
+
+### 4. Composer依存パッケージのインストール
+
+```bash
+composer install
+```
+
+※ホスト側にPHP 8.5系とComposerがインストールされている環境を想定しています。
+
+### 5. Laravel Sailの起動
+
+```bash
+./vendor/bin/sail up -d
+```
+
+### 6. アプリケーションキーの生成
+
+```bash
+./vendor/bin/sail artisan key:generate
+```
+
+### 7. データベースのマイグレーションと初期データ投入
+
+```bash
+./vendor/bin/sail artisan migrate --seed
+```
+
+### 8. フロントエンドの準備
+
+```bash
+./vendor/bin/sail npm install
+```
+
+開発サーバーを起動する。
+
+```bash
+./vendor/bin/sail npm run dev
+```
+
+※開発サーバーを起動したターミナルはそのままにしておく。
+
+### 9. アプリケーションへのアクセス
+
+一般ユーザーログイン画面
+
+http://localhost/login
+
+管理者ログイン画面
+
+http://localhost/admin/login
+
+## テストアカウント
+
+| 権限 | ユーザー名 | メールアドレス | パスワード |
+|---|---|---|---|
+| 一般ユーザー | user1 | user1@example.com | password |
+| 一般ユーザー | user2 | user2@example.com | password |
+| 管理者 | user3 | user3@example.com | password |
+
+※テストアカウントは `DatabaseSeeder.php` により作成されます。すべてメール認証済みの状態で登録されます。
+
+## 初期データ
+
+`DatabaseSeeder.php` により、以下の勤怠データが登録されます。
+
+- user1：2026年6月〜10月の各月15日分
+- user1：2026年11月の平日17日分
+- user2：2026年11月の平日17日分
+- user3：2026年11月の平日17日分
+
+user1の2026年11月の勤怠データには、以下の勤務パターンが含まれています。
+
+| 勤務パターン | 日数 |
+|---|---:|
+| 通常勤務（9:00〜18:00） | 10日 |
+| 残業（9:00〜20:00） | 3日 |
+| 遅刻（9:30〜18:00） | 2日 |
+| 早退（9:00〜17:00） | 1日 |
+| 長時間労働（8:00〜21:00） | 1日 |
+
+すべての初期勤怠データには、12:00〜13:00の休憩が登録されています。
+
+## テスト実行
+
+LaravelのFeatureテストを実行する。
+
+```bash
+./vendor/bin/sail artisan test
+```
+
+特定のテストのみ実行する場合：
+
+```bash
+./vendor/bin/sail artisan test --filter=AttendanceTest
+```
+
+## 機能一覧
+
+### 一般ユーザー
+
+- 会員登録
+- ログイン・ログアウト
+- メール認証
+- 出勤・退勤打刻
+- 休憩開始・休憩終了
+- 勤怠ステータス表示
+- 月次勤怠一覧表示
+- 前月・翌月の勤怠表示
+- 勤怠詳細表示
+- 勤怠修正申請
+- 修正申請一覧（承認待ち・承認済み）
+
+### 管理者
+
+- ログイン・ログアウト
+- 日次勤怠一覧表示
+- 前日・翌日の勤怠表示
+- スタッフ勤怠詳細表示
+- スタッフ一覧表示
+- スタッフ別月次勤怠一覧表示
+- 修正申請一覧表示
+- 勤怠修正申請の承認
+- スタッフ別勤怠データのCSV出力
+
+## 補足事項
+
+- 認証にはLaravel Fortifyを使用しています。
+- 一般ユーザーと管理者は `admin_status` により権限を判定しています。
+- メール認証にはMailpitを使用しています。
+- 勤怠修正申請は管理者による承認機能を備えています。
+- スタッフ別勤怠データはCSV形式で出力できます。
