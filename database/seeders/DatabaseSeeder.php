@@ -26,7 +26,7 @@ class DatabaseSeeder extends Seeder
         ]);
 
         // user2を作成（一般ユーザー）
-        $user2 = User::create([
+        User::create([
             'name' => 'user2',
             'email' => 'user2@example.com',
             'password' => bcrypt('password'),
@@ -35,7 +35,7 @@ class DatabaseSeeder extends Seeder
         ]);
 
         // user3を作成（管理者）
-        $user3 = User::create([
+        User::create([
             'name' => 'user3',
             'email' => 'user3@example.com',
             'password' => bcrypt('password'),
@@ -146,84 +146,6 @@ class DatabaseSeeder extends Seeder
                 ]);
 
                 // 固定休憩を登録する
-                AttendanceBreak::create([
-                    'attendance_record_id' => $attendance->id,
-                    'break_in' => '12:00:00',
-                    'break_out' => '13:00:00',
-                ]);
-
-                // 登録日数を増やす
-                $count++;
-            }
-
-            // 翌日に進む
-            $date->addDay();
-        }
-
-        // --------------------------------
-        // user2：2026年11月（17日）
-        // --------------------------------
-
-        // 11月1日から開始する
-        $date = $currentMonth->copy();
-
-        // 登録した勤務日数を数える
-        $count = 0;
-
-        // 17日分の勤怠を作成する
-        while ($count < 17) {
-
-            // 平日の場合だけ登録する
-            if ($date->isWeekday()) {
-
-                // 通常勤務の勤怠を作成する
-                $attendance = AttendanceRecord::create([
-                    'user_id' => $user2->id,
-                    'date' => $date->format('Y-m-d'),
-                    'clock_in' => '09:00:00',
-                    'clock_out' => '18:00:00',
-                ]);
-
-                // 休憩を登録する
-                AttendanceBreak::create([
-                    'attendance_record_id' => $attendance->id,
-                    'break_in' => '12:00:00',
-                    'break_out' => '13:00:00',
-                ]);
-
-                // 登録日数を増やす
-                $count++;
-            }
-
-            // 翌日に進む
-            $date->addDay();
-        }
-
-        // --------------------------------
-        // user3：2026年11月（17日）
-        // --------------------------------
-
-        // 11月1日から開始する
-        $date = $currentMonth->copy();
-
-        // 登録した勤務日数を数える
-        $count = 0;
-
-        // 17日分の勤怠を作成する
-        while ($count < 17) {
-
-            // 平日の場合だけ登録する
-            if ($date->isWeekday()) {
-
-                // 通常勤務の勤怠を作成する
-                $attendance = AttendanceRecord::create([
-                    'user_id' => $user3->id,
-                    'date' => $date->format('Y-m-d'),
-                    'clock_in' => '09:00:00',
-                    'clock_out' => '18:00:00',
-                ]);
-
-                // 休憩を登録する
                 AttendanceBreak::create([
                     'attendance_record_id' => $attendance->id,
                     'break_in' => '12:00:00',
