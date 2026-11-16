@@ -25,6 +25,7 @@ class AttendanceCorrect extends Model
         'clock_out',
         'comment',
         'approval_status',
+        'requested_at',
     ];
 
     // カラムの型変換

@@ -144,7 +144,7 @@ class AttendanceTest extends TestCase
         // 出勤日時がデータベースに正しく保存されていることを確認する
         $this->assertDatabaseHas('attendance_records', [
             'user_id' => $user->id,
-            'date' => '2026-10-11 00:00:00',
+            'date' => '2026-10-11',
             'clock_in' => '09:00:00',
         ]);
 
@@ -358,7 +358,7 @@ class AttendanceTest extends TestCase
 
         $this->assertDatabaseHas('attendance_records', [
             'user_id' => $user->id,
-            'date' => '2026-10-11 00:00:00',
+            'date' => '2026-10-11',
             'clock_in' => '09:00:00',
             'clock_out' => '18:00:00',
         ]);
