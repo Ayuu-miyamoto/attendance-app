@@ -6,15 +6,17 @@ use App\Actions\Fortify\CreateNewUser;
 use App\Actions\Fortify\ResetUserPassword;
 use App\Actions\Fortify\UpdateUserPassword;
 use App\Actions\Fortify\UpdateUserProfileInformation;
+use App\Actions\Fortify\AuthenticateAdmin;
+use App\Models\User;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
 use Laravel\Fortify\Actions\RedirectIfTwoFactorAuthenticatable;
-use Laravel\Fortify\Fortify;
-use App\Actions\Fortify\AuthenticateAdmin;
 use Laravel\Fortify\Actions\AttemptToAuthenticate;
+use Laravel\Fortify\Fortify;
 
 class FortifyServiceProvider extends ServiceProvider
 {
@@ -45,6 +47,7 @@ class FortifyServiceProvider extends ServiceProvider
 
         // メール認証が必要なユーザーに表示する画面を指定する
         Fortify::verifyEmailView(function () {
+
             // 既存のメール認証画面を表示する
             return view('auth.verify-email');
         });
@@ -66,6 +69,48 @@ class FortifyServiceProvider extends ServiceProvider
             RedirectIfTwoFactorAuthenticatable::class
         );
 
+        // ========================================
+        // 一般ユーザー・管理者のログイン認証
+        // ========================================
+
+        // Fortifyのログイン認証条件を設定する
+        Fortify::authenticateUsing(function (Request $request) {
+
+            // 管理者ログインの場合
+            if ($request->is('admin/login')) {
+
+                // 管理者権限を持つユーザーを取得する
+                $user = User::where('email', $request->input('email'))
+                    ->where('admin_status', true)
+                    ->first();
+
+            // 一般ユーザーログインの場合
+            } else {
+
+                // 一般ユーザーだけ取得する
+                $user = User::where('email', $request->input('email'))
+                    ->where('admin_status', false)
+                    ->first();
+            }
+
+            // ユーザーが存在しない場合は認証失敗とする
+            if (!$user) {
+                return null;
+            }
+
+            // パスワードが一致しない場合は認証失敗とする
+            if (!Hash::check($request->input('password', ''), $user->password)) {
+                return null;
+            }
+
+            // 認証に成功したユーザーを返す
+            return $user;
+        });
+
+        // ========================================
+        // ログイン試行回数の制限
+        // ========================================
+
         // ログインの試行回数を制限する
         RateLimiter::for('login', function (Request $request) {
 
@@ -86,6 +131,10 @@ class FortifyServiceProvider extends ServiceProvider
                 $request->session()->get('login.id')
             );
         });
+
+        // ========================================
+        // Fortifyのログイン認証処理
+        // ========================================
 
         // Fortifyのログイン認証処理を設定する
         Fortify::authenticateThrough(function (Request $request) {

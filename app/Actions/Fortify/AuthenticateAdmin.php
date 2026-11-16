@@ -10,43 +10,74 @@ class AuthenticateAdmin
 {
     public function handle(Request $request, Closure $next)
     {
-        // 管理者ログイン以外はFortifyの通常処理へ進む
-        if (!$request->is('admin/login')) {
-            $response = $next($request);
+        // 管理者ログインの場合
+        if ($request->is('admin/login')) {
 
-            // 一般ユーザーのログイン成功時、管理者のログイン状態を解除
-            if ($request->is('login') && Auth::guard('web')->check()) {
-                Auth::guard('admin')->logout();
+            // 管理者ログインの入力チェック
+            $credentials = $request->validate([
+                'email' => 'required',
+                'password' => 'required',
+            ], [
+                'email.required' => 'メールアドレスを入力してください',
+                'password.required' => 'パスワードを入力してください',
+            ]);
+
+            // 管理者権限を持つユーザーだけ認証する
+            if (Auth::guard('admin')->attempt([
+                'email' => $credentials['email'],
+                'password' => $credentials['password'],
+                'admin_status' => true,
+            ])) {
+
+                // 一般ユーザーのログイン状態を解除する
+                Auth::guard('web')->logout();
+
+                // セッションIDを再生成する
+                $request->session()->regenerate();
+
+                // 管理者の勤怠一覧画面へ移動する
+                return redirect('/admin/attendance/list');
             }
 
-            return $response;
+            // 認証失敗時のエラーを返す
+            return back()->withErrors([
+                'email' => 'ログイン情報が登録されていません',
+            ])->withInput();
         }
 
-        // 管理者ログインの入力チェック
-        $credentials = $request->validate([
-            'email' => 'required',
-            'password' => 'required',
-        ], [
-            'email.required' => 'メールアドレスを入力してください',
-            'password.required' => 'パスワードを入力してください',
-        ]);
+        // 一般ログインの場合
+        if ($request->is('login')) {
 
-        // 管理者アカウントだけ認証する
-        if (Auth::guard('admin')->attempt([
-            'email' => $credentials['email'],
-            'password' => $credentials['password'],
-            'admin_status' => true,
-        ])) {
-            // 管理者ログイン成功時、一般ユーザーのログイン状態を解除
-            Auth::guard('web')->logout();
+            // 一般ログインの入力チェック
+            $credentials = $request->validate([
+                'email' => 'required',
+                'password' => 'required',
+            ], [
+                'email.required' => 'メールアドレスを入力してください',
+                'password.required' => 'パスワードを入力してください',
+            ]);
 
-            $request->session()->regenerate();
+            // 一般ユーザーだけ認証する
+            if (!Auth::guard('web')->attempt([
+                'email' => $credentials['email'],
+                'password' => $credentials['password'],
+                'admin_status' => false,
+            ])) {
 
-            return redirect('/admin/attendance/list');
+                // 認証失敗時のエラーを返す
+                return back()->withErrors([
+                    'email' => 'ログイン情報が登録されていません',
+                ])->withInput();
+            }
+
+            // 管理者のログイン状態を解除する
+            Auth::guard('admin')->logout();
+
+            // Fortifyの後続処理へ進む
+            return $next($request);
         }
 
-        return back()->withErrors([
-            'email' => 'ログイン情報が登録されていません',
-        ])->withInput();
+        // その他の処理はFortifyに任せる
+        return $next($request);
     }
 }

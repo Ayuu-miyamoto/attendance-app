@@ -11,6 +11,7 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\DB;
 
 class AdminAttendanceController extends Controller
 {
@@ -45,7 +46,7 @@ class AdminAttendanceController extends Controller
             ->whereDate('date', $date)
             ->get();
 
-        // Collectionのeachで勤怠データを1件ずつ処理する
+        // 勤怠データを1件ずつ処理する
         $attendanceRecords->each(function (AttendanceRecord $attendance): void {
 
             // Modelのアクセサから休憩時間を取得する
@@ -128,7 +129,7 @@ class AdminAttendanceController extends Controller
 
             'breaks' => $breaks,
 
-            'comment' => '',
+            'comment' => $attendance->comment ?? '',
         ];
 
         // 管理者用勤怠詳細画面を表示する
@@ -206,32 +207,82 @@ class AdminAttendanceController extends Controller
     }
 
     /**
-     * 指定された勤怠修正申請を承認する
+     * 指定された勤怠修正申請を承認する。
      *
      * @param int $id 修正申請のID
      * @return RedirectResponse 承認画面へのリダイレクト
      */
     public function approveApplication(int $id): RedirectResponse
     {
-        // 指定された修正申請を取得する
-        $application = AttendanceCorrect::findOrFail($id);
+        // 勤怠データと承認状態をまとめて更新する
+        DB::transaction(function () use ($id): void {
 
-        // 承認待ちの場合のみ処理する
-        if (!$application->approval_status) {
+            // 二重承認を防ぐため申請データをロックして取得する
+            $application = AttendanceCorrect::with('breakCorrects')
+                ->lockForUpdate()
+                ->findOrFail($id);
 
-            // 承認済みに変更する
+            // すでに承認済みの場合は処理しない
+            if ($application->approval_status === '承認済み') {
+                return;
+            }
+
+            // 修正対象の勤怠データを取得する
+            $attendance = $application->attendanceRecord;
+
+            // 修正申請に紐づく休憩データを取得する
+            $breaks = $application->breakCorrects;
+
+            // 勤怠更新用のデータを作成する
+            $validated = [
+
+                // 修正申請の出勤時刻をH:i形式にする
+                'new_clock_in' => Carbon::parse(
+                    $application->clock_in
+                )->format('H:i'),
+
+                // 修正申請の退勤時刻をH:i形式にする
+                'new_clock_out' => Carbon::parse(
+                    $application->clock_out
+                )->format('H:i'),
+
+                // 申請された休憩開始時刻を配列に変換する
+                'new_break_in' => $breaks->map(function ($break) {
+
+                    // 休憩開始時刻をH:i形式で返す
+                    return $break->break_in
+                        ? Carbon::parse($break->break_in)->format('H:i')
+                        : null;
+
+                })->all(),
+
+                // 申請された休憩終了時刻を配列に変換する
+                'new_break_out' => $breaks->map(function ($break) {
+
+                    // 休憩終了時刻をH:i形式で返す
+                    return $break->break_out
+                        ? Carbon::parse($break->break_out)->format('H:i')
+                        : null;
+
+                })->all(),
+            ];
+
+            // Modelのメソッドで出勤・退勤・休憩をまとめて更新する
+            $attendance->updateAttendance($validated);
+
+            // 承認状態を承認済みに変更する
             $application->approval_status = true;
 
-            // 承認日時を設定する
+            // 承認日時を保存する
             $application->approved_at = now();
 
-            // 変更内容を保存する
+            // 承認情報をDBに保存する
             $application->save();
-        }
+        });
 
-        // 承認画面に戻る
+        // 承認後に申請詳細画面へ戻る
         return redirect(
-            '/stamp_correction_request/approve/' . $application->id
+            '/stamp_correction_request/approve/' . $id
         );
     }
 }
