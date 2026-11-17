@@ -12,8 +12,6 @@ class StaffController extends Controller
 {
     /**
      * 管理者用のスタッフ一覧画面を表示する。
-     *
-     * @return View スタッフ一覧画面
      */
     public function index(): View
     {
@@ -26,10 +24,6 @@ class StaffController extends Controller
 
     /**
      * 指定されたスタッフの月次勤怠一覧画面を表示する。
-     *
-     * @param Request $request 表示対象の年月を含むリクエスト
-     * @param int $id スタッフのユーザーID
-     * @return View スタッフ別勤怠一覧画面
      */
     public function show(Request $request, int $id): View
     {
@@ -41,10 +35,10 @@ class StaffController extends Controller
             $request->query('date', now()->format('Y-m'))
         )->startOfMonth();
 
-        // 表示する月の初日を取得する
+        // 対象月の初日を取得する
         $startDate = $date->copy()->startOfMonth();
 
-        // 表示する月の末日を取得する
+        // 対象月の末日を取得する
         $endDate = $date->copy()->endOfMonth();
 
         // 前月の年月を取得する
@@ -57,7 +51,7 @@ class StaffController extends Controller
             ->addMonthNoOverflow()
             ->format('Y-m');
 
-        // 指定スタッフの対象月の勤怠を休憩情報と一緒に取得する
+        // 指定スタッフの対象月の勤怠を取得する
         $records = AttendanceRecord::with('breaks')
             ->where('user_id', $user->id)
             ->whereBetween('date', [
@@ -67,10 +61,10 @@ class StaffController extends Controller
             ->orderBy('date')
             ->get()
 
-            // 日付をキーにして勤怠データを検索できるようにする
+            // 日付をキーにして検索できるようにする
             ->keyBy(function (AttendanceRecord $record): string {
 
-                // 勤怠日付をYYYY-MM-DD形式で返す
+                // YYYY-MM-DD形式の日付を返す
                 return $record->date->format('Y-m-d');
             });
 
@@ -87,22 +81,25 @@ class StaffController extends Controller
             $day->addDay()
         ) {
 
-            // 処理中の日付をYYYY-MM-DD形式で取得する
+            // 処理中の日付を取得する
             $dayString = $day->format('Y-m-d');
 
             // その日の勤怠レコードを取得する
             $record = $records->get($dayString);
 
-            // 日付と曜日を表示用の文字列に変換する
+            // 日付と曜日を表示用に変換する
             $formattedDate = $day->format('Y/m/d')
                 . '(' . $weekdays[$day->dayOfWeek] . ')';
 
             // 勤怠レコードが存在しない場合
             if (!$record) {
 
-                // 日付だけを表示する空欄の勤怠情報を追加する
+                // スタッフIDと日付を組み合わせた詳細用IDを作成する
+                $detailId = $user->id . '-' . $dayString;
+
+                // 未出勤日の表示情報を追加する
                 $formattedAttendanceRecords[] = [
-                    'id' => null,
+                    'id' => $detailId,
                     'date' => $formattedDate,
                     'clock_in' => '',
                     'clock_out' => '',
@@ -120,31 +117,31 @@ class StaffController extends Controller
             // 合計実働時間を取得する
             $totalWorkMinutes = $record->total_work_minutes;
 
-            // 休憩時間の初期値を空欄にする
+            // 休憩時間の初期値を設定する
             $totalBreakTime = null;
 
-            // 休憩時間が存在する場合
+            // 休憩時間がある場合
             if ($totalBreakMinutes > 0) {
 
-                // 合計休憩時間を表示用の形式に変換する
+                // 休憩時間を表示用に変換する
                 $totalBreakTime = $record->formatMinutes(
                     $totalBreakMinutes
                 );
             }
 
-            // 実働時間の初期値を空欄にする
+            // 実働時間の初期値を設定する
             $totalTime = null;
 
-            // 出勤・退勤時刻が両方登録されている場合
+            // 出勤・退勤時刻が両方ある場合
             if ($record->clock_in && $record->clock_out) {
 
-                // 合計実働時間を表示用の形式に変換する
+                // 実働時間を表示用に変換する
                 $totalTime = $record->formatMinutes(
                     $totalWorkMinutes
                 );
             }
 
-            // 勤怠が存在する日の情報を配列に追加する
+            // 勤怠が存在する日の情報を追加する
             $formattedAttendanceRecords[] = [
                 'id' => $record->id,
 
@@ -164,7 +161,7 @@ class StaffController extends Controller
             ];
         }
 
-        // スタッフ別の月次勤怠一覧画面を表示する
+        // スタッフ別勤怠一覧画面を表示する
         return view('admin.staff-attendance-list', compact(
             'user',
             'date',

@@ -64,14 +64,11 @@ Route::get('/attendance/{id}', function (string $id) {
     // 管理者としてログインしている場合
     if (Auth::guard('admin')->check()) {
 
-        // 管理者は数値IDだけを使用できるようにする
-        abort_unless(ctype_digit($id), 404);
-
         // 管理者ガードを使用する
         Auth::shouldUse('admin');
 
         // 管理者用の勤怠詳細画面を表示する
-        return app(AdminAttendanceController::class)->show((int) $id);
+        return app(AdminAttendanceController::class)->show($id);
     }
 
     // 一般ユーザーとしてログインしている場合
@@ -81,10 +78,18 @@ Route::get('/attendance/{id}', function (string $id) {
         /** @var User $user */
         $user = Auth::guard('web')->user();
 
-        // メール認証が完了していない場合は認証案内画面へ移動する
+        // メール認証が完了していない場合
         if (!$user->hasVerifiedEmail()) {
+
+            // 認証案内画面へ移動する
             return redirect()->route('verification.notice');
         }
+
+        // 一般ユーザーはスタッフID付きURLを使用できない
+        abort_if(
+            preg_match('/^[0-9]+-[0-9]{4}-/', $id) === 1,
+            404
+        );
 
         // 一般ユーザーガードを使用する
         Auth::shouldUse('web');
@@ -96,7 +101,10 @@ Route::get('/attendance/{id}', function (string $id) {
     // 未ログインの場合はログイン画面へ移動する
     return redirect('/login');
 
-})->where('id', '[0-9]+|[0-9]{4}-[0-9]{2}-[0-9]{2}');
+})->where(
+    'id',
+    '[0-9]+|[0-9]{4}-[0-9]{2}-[0-9]{2}|[0-9]+-[0-9]{4}-[0-9]{2}-[0-9]{2}'
+);
 
 // 勤怠修正処理
 Route::post('/attendance/{id}', function (string $id) {
@@ -104,16 +112,13 @@ Route::post('/attendance/{id}', function (string $id) {
     // 管理者としてログインしている場合
     if (Auth::guard('admin')->check()) {
 
-        // 管理者は数値IDだけを使用できるようにする
-        abort_unless(ctype_digit($id), 404);
-
         // 管理者ガードを使用する
         Auth::shouldUse('admin');
 
-        // 管理者は勤怠データを直接更新する
+        // 管理者は勤怠を直接登録・更新する
         return app()->call(
             [app(AdminAttendanceController::class), 'update'],
-            ['id' => (int) $id]
+            ['id' => $id]
         );
     }
 
@@ -124,10 +129,18 @@ Route::post('/attendance/{id}', function (string $id) {
         /** @var User $user */
         $user = Auth::guard('web')->user();
 
-        // メール認証が完了していない場合は認証案内画面へ移動する
+        // メール認証が完了していない場合
         if (!$user->hasVerifiedEmail()) {
+
+            // 認証案内画面へ移動する
             return redirect()->route('verification.notice');
         }
+
+        // 一般ユーザーはスタッフID付きURLを使用できない
+        abort_if(
+            preg_match('/^[0-9]+-[0-9]{4}-/', $id) === 1,
+            404
+        );
 
         // 一般ユーザーガードを使用する
         Auth::shouldUse('web');
@@ -142,7 +155,10 @@ Route::post('/attendance/{id}', function (string $id) {
     // 未ログインの場合はログイン画面へ移動する
     return redirect('/login');
 
-})->where('id', '[0-9]+|[0-9]{4}-[0-9]{2}-[0-9]{2}');
+})->where(
+    'id',
+    '[0-9]+|[0-9]{4}-[0-9]{2}-[0-9]{2}|[0-9]+-[0-9]{4}-[0-9]{2}-[0-9]{2}'
+);
 
 
 // ==================================================================================
@@ -170,7 +186,7 @@ Route::get('/stamp_correction_request/list', function () {
         /** @var User $user */
         $user = Auth::guard('web')->user();
 
-        // メール認証が完了していない場合は認証案内画面へ移動する
+        // メール認証が完了していない場合
         if (!$user->hasVerifiedEmail()) {
             return redirect()->route('verification.notice');
         }
@@ -206,7 +222,7 @@ Route::get('/application/{id}', function (int $id) {
         /** @var User $user */
         $user = Auth::guard('web')->user();
 
-        // メール認証が完了していない場合は認証案内画面へ移動する
+        // メール認証が完了していない場合
         if (!$user->hasVerifiedEmail()) {
             return redirect()->route('verification.notice');
         }

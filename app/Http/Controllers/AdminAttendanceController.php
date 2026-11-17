@@ -17,9 +17,6 @@ class AdminAttendanceController extends Controller
 {
     /**
      * 管理者用の日次勤怠一覧画面を表示する。
-     *
-     * @param Request $request 表示対象の日付を含むリクエスト
-     * @return View 管理者用勤怠一覧画面
      */
     public function index(Request $request): View
     {
@@ -81,11 +78,69 @@ class AdminAttendanceController extends Controller
     /**
      * 指定された勤怠の詳細画面を表示する。
      *
-     * @param int $id 勤怠レコードのID
-     * @return View 管理者用勤怠詳細画面
+     * @param int|string $id 勤怠IDまたはスタッフIDと日付
+     * @return View|RedirectResponse 詳細画面またはリダイレクト
      */
-    public function show(int $id): View
+    public function show(int|string $id): View|RedirectResponse
     {
+        // IDが数値ではない場合は未出勤日の詳細として扱う
+        if (!ctype_digit((string) $id)) {
+
+            // スタッフIDと日付を分離する
+            [$userId, $dateString] = explode('-', (string) $id, 2);
+
+            // 指定されたスタッフを取得する
+            $user = User::findOrFail((int) $userId);
+
+            // 日付を厳密に解析する
+            $parsedDate = \DateTimeImmutable::createFromFormat(
+                '!Y-m-d',
+                $dateString
+            );
+
+            // 正しい日付でなければ404エラーにする
+            abort_unless(
+                $parsedDate !== false
+                    && $parsedDate->format('Y-m-d') === $dateString,
+                404
+            );
+
+            // 同じスタッフ・日付の勤怠がすでにあるか確認する
+            $existingAttendance = AttendanceRecord::where(
+                'user_id',
+                $user->id
+            )
+                ->whereDate('date', $dateString)
+                ->first();
+
+            // すでに勤怠が存在する場合
+            if ($existingAttendance) {
+
+                // 既存の勤怠詳細画面へ移動する
+                return redirect('/attendance/' . $existingAttendance->id);
+            }
+
+            // 日付を表示用に変換する
+            $date = Carbon::parse($dateString);
+
+            // 未出勤日の詳細データを作成する
+            $attendanceRecord = [
+                'id' => $id,
+                'year' => $date->format('Y年'),
+                'date' => $date->format('m月d日'),
+                'clock_in' => '',
+                'clock_out' => '',
+                'breaks' => [],
+                'comment' => '',
+            ];
+
+            // 既存の管理者用Bladeで詳細画面を表示する
+            return view('admin.admin-detail', compact(
+                'attendanceRecord',
+                'user'
+            ));
+        }
+
         // 指定された勤怠を休憩情報と一緒に取得する
         $attendance = AttendanceRecord::with('breaks')
             ->findOrFail($id);
@@ -140,30 +195,98 @@ class AdminAttendanceController extends Controller
     }
 
     /**
-     * 管理者が勤怠情報を修正する。
+     * 管理者が勤怠情報を登録・修正する。
      *
-     * @param AttendanceCorrectionRequest $request バリデーション済みの修正内容
-     * @param int $id 修正対象の勤怠レコードID
-     * @return RedirectResponse 勤怠詳細画面へのリダイレクト
+     * @param AttendanceCorrectionRequest $request バリデーション済みの入力
+     * @param int|string $id 勤怠IDまたはスタッフIDと日付
+     * @return RedirectResponse 保存後の勤怠詳細画面
      */
     public function update(
         AttendanceCorrectionRequest $request,
-        int $id
+        int|string $id
     ): RedirectResponse {
-        // 指定された勤怠データを取得する
-        $attendance = AttendanceRecord::findOrFail($id);
 
-        // Modelのメソッドを呼び出して勤怠を更新する
-        $attendance->updateAttendance($request->validated());
+        // バリデーション済みの入力値を取得する
+        $validated = $request->validated();
 
-        // 更新後の勤怠詳細画面に戻る
-        return redirect('/admin/attendance/' . $id);
+        // 数値IDの場合は既存の勤怠を更新する
+        if (ctype_digit((string) $id)) {
+
+            // 指定された勤怠データを取得する
+            $attendance = AttendanceRecord::findOrFail($id);
+
+            // Modelのメソッドで勤怠を更新する
+            $attendance->updateAttendance($validated);
+
+            // 更新後の詳細画面に戻る
+            return redirect('/admin/attendance/' . $id);
+        }
+
+        // スタッフIDと日付を分離する
+        [$userId, $dateString] = explode('-', (string) $id, 2);
+
+        // 日付を厳密に解析する
+        $parsedDate = \DateTimeImmutable::createFromFormat(
+            '!Y-m-d',
+            $dateString
+        );
+
+        // 不正な日付の場合は404エラーにする
+        abort_unless(
+            $parsedDate !== false
+                && $parsedDate->format('Y-m-d') === $dateString,
+            404
+        );
+
+        // 保存後の勤怠IDを格納する変数を用意する
+        $attendanceId = null;
+
+        // 新規登録と勤怠更新をまとめて処理する
+        DB::transaction(function () use (
+            $userId,
+            $dateString,
+            $validated,
+            &$attendanceId
+        ): void {
+
+            // 対象スタッフをロックして取得する
+            $user = User::whereKey((int) $userId)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            // 同じ日付の勤怠がすでに存在するか確認する
+            $attendance = AttendanceRecord::where(
+                'user_id',
+                $user->id
+            )
+                ->whereDate('date', $dateString)
+                ->first();
+
+            // 勤怠レコードがまだ存在しない場合
+            if (!$attendance) {
+
+                // 出退勤が空欄の勤怠レコードを新規作成する
+                $attendance = AttendanceRecord::create([
+                    'user_id' => $user->id,
+                    'date' => $dateString,
+                    'clock_in' => null,
+                    'clock_out' => null,
+                ]);
+            }
+
+            // Modelのメソッドで出退勤・休憩を保存する
+            $attendance->updateAttendance($validated);
+
+            // 保存された勤怠IDを取得する
+            $attendanceId = $attendance->id;
+        });
+
+        // 新規登録した勤怠の詳細画面に移動する
+        return redirect('/admin/attendance/' . $attendanceId);
     }
 
     /**
      * 管理者用の勤怠修正申請一覧画面を表示する。
-     *
-     * @return View 修正申請一覧画面
      */
     public function applicationList(): View
     {
@@ -184,9 +307,6 @@ class AdminAttendanceController extends Controller
 
     /**
      * 指定された勤怠修正申請の詳細画面を表示する。
-     *
-     * @param int $id 修正申請のID
-     * @return View 修正申請詳細画面
      */
     public function showApplication(int $id): View
     {
@@ -208,9 +328,6 @@ class AdminAttendanceController extends Controller
 
     /**
      * 指定された勤怠修正申請を承認する。
-     *
-     * @param int $id 修正申請のID
-     * @return RedirectResponse 承認画面へのリダイレクト
      */
     public function approveApplication(int $id): RedirectResponse
     {
