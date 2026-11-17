@@ -276,7 +276,7 @@ class AttendanceController extends Controller
             $attendance = $attendanceRecords->get($dayString);
 
             // 日付と日本語の曜日を表示用に変換する
-            $formattedDate = $day->format('Y/m/d')
+            $formattedDate = $day->format('m/d')
                 . '(' . $weekdays[$day->dayOfWeek] . ')';
 
             // 勤怠レコードが存在しない場合

@@ -88,7 +88,7 @@ class StaffController extends Controller
             $record = $records->get($dayString);
 
             // 日付と曜日を表示用に変換する
-            $formattedDate = $day->format('Y/m/d')
+            $formattedDate = $day->format('m/d')
                 . '(' . $weekdays[$day->dayOfWeek] . ')';
 
             // 勤怠レコードが存在しない場合
