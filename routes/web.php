@@ -45,12 +45,6 @@ Route::get('/attendance/list', [
     'list',
 ])->middleware(['auth:web', 'verified']);
 
-// 一般ユーザーの勤怠一覧画面
-Route::get('/attendance/list', [
-    AttendanceController::class,
-    'list',
-])->middleware(['auth:web', 'verified']);
-
 // マイ勤怠レポート画面
 Route::get('/attendance/report', [
     AttendanceReportController::class,

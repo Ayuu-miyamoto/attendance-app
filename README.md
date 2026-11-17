@@ -11,8 +11,8 @@
 ## 使用技術
 
 - Laravel Framework 10.50.3
-- PHP 8.5.10
-- MySQL 8.4.11
+- PHP 8.2
+- MySQL 8.4
 - Composer 2.10.1
 - Laravel Sail
 - Docker Desktop
