@@ -256,6 +256,9 @@ class AttendanceController extends Controller
                 return $attendance->date->format('Y-m-d');
             });
 
+        // 日本語の曜日を定義する
+        $weekdays = ['日', '月', '火', '水', '木', '金', '土'];
+
         // 一覧表示用の配列を用意する
         $formattedAttendanceRecords = [];
 
@@ -272,13 +275,17 @@ class AttendanceController extends Controller
             // その日の勤怠レコードを取得する
             $attendance = $attendanceRecords->get($dayString);
 
+            // 日付と日本語の曜日を表示用に変換する
+            $formattedDate = $day->format('Y/m/d')
+                . '(' . $weekdays[$day->dayOfWeek] . ')';
+
             // 勤怠レコードが存在しない場合
             if (!$attendance) {
 
                 // 日付形式のIDと空欄の勤怠情報を設定する
                 $formattedAttendanceRecords[] = [
                     'id' => $dayString,
-                    'date' => $day->format('m/d'),
+                    'date' => $formattedDate,
                     'clock_in' => '',
                     'clock_out' => '',
                     'total_break_time' => null,
@@ -321,7 +328,7 @@ class AttendanceController extends Controller
             $formattedAttendanceRecords[] = [
                 'id' => $attendance->id,
 
-                'date' => $day->format('m/d'),
+                'date' => $formattedDate,
 
                 'clock_in' => $attendance->clock_in
                     ? Carbon::parse($attendance->clock_in)->format('H:i')

@@ -301,7 +301,7 @@ class AttendanceListTest extends TestCase
                 // 10月12日の表示データを取得する
                 $day = collect($records)->firstWhere(
                     'date',
-                    '10/12'
+                    '2026/10/12(月)'
                 );
 
                 // 該当日が存在しなければ失敗とする
