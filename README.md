@@ -94,6 +94,7 @@ erDiagram
 - 会員登録：http://localhost/register
 - 一般ユーザーログイン：http://localhost/login
 - 管理者ログイン：http://localhost/admin/login
+- phpMyAdmin：http://localhost:8080
 - Mailpit：http://localhost:8025
 
 ## 動作環境
