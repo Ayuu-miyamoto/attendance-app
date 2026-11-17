@@ -41,7 +41,7 @@ class AttendanceCorrectionTest extends TestCase
 
         // 出勤・退勤時刻のバリデーションエラーを確認する
         $response->assertSessionHasErrors([
-            'new_clock_out' => '出勤時間もしくは退勤時間が不適切な値です。',
+            'new_clock_out' => '出勤時間もしくは退勤時間が不適切な値です',
         ]);
 
         // 不正な修正申請が保存されていないことを確認する
@@ -78,7 +78,7 @@ class AttendanceCorrectionTest extends TestCase
 
         // 休憩終了時刻のバリデーションエラーを確認する
         $response->assertSessionHasErrors([
-            'new_break_out.0' => '休憩時間もしくは退勤時間が不適切な値です。',
+            'new_break_out.0' => '休憩時間もしくは退勤時間が不適切な値です',
         ]);
 
         // 不正な修正申請が保存されていないことを確認する
@@ -113,7 +113,7 @@ class AttendanceCorrectionTest extends TestCase
 
         // 備考のバリデーションエラーを確認する
         $response->assertSessionHasErrors([
-            'comment' => '備考を記入してください。',
+            'comment' => '備考を記入してください',
         ]);
 
         // 不正な修正申請が保存されていないことを確認する
