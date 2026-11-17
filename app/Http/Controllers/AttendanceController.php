@@ -6,6 +6,7 @@ use App\Models\AttendanceRecord;
 use App\Models\AttendanceBreak;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 use App\Models\AttendanceCorrect;
 use App\Models\BreakCorrect;
@@ -30,13 +31,16 @@ class AttendanceController extends Controller
             ->whereDate('date', today())
             ->first();
 
-        // 勤怠ステータスを取得する
-        // もし勤怠レコードがなければ勤務外とする
-        if (!$attendanceRecord) {
+        // 勤怠がない、または出勤時刻が未登録の場合は勤務外とする
+        if (!$attendanceRecord || !$attendanceRecord->clock_in) {
+
+            // 勤務外ステータスを設定する
             $attendanceStatus = '勤務外';
 
-        // 勤怠レコードがある場合は、勤怠ステータスを取得する
+        // 出勤時刻が登録されている場合
         } else {
+
+            // Modelから勤怠ステータスを取得する
             $attendanceStatus = $attendanceRecord->getAttendanceStatus();
         }
 
@@ -75,70 +79,130 @@ class AttendanceController extends Controller
         // 打刻操作の種類を取得する
         $action = $request->input('action');
 
-        // 当日の勤怠レコードを取得する
-        $attendanceRecord = AttendanceRecord::where('user_id', $user->id)
-            ->whereDate('date', today())
-            ->first();
+        // 同じユーザーの打刻と修正申請を順番に処理する
+        DB::transaction(function () use ($user, $action): void {
 
-        // 出勤
-        if ($action === 'clock_in') {
+            // 同じユーザーの同時更新を防ぐためユーザー行をロックする
+            $user->newQuery()
+                ->whereKey($user->id)
+                ->lockForUpdate()
+                ->firstOrFail();
 
-            // 当日の勤怠レコードがなければ出勤記録を作成する
-            if (!$attendanceRecord) {
-                AttendanceRecord::create([
-                    'user_id' => $user->id,
-                    'date' => today(),
-                    'clock_in' => now()->format('H:i:s'),
-                ]);
-            }
-        }
+            // 当日の勤怠レコードを取得する
+            $attendanceRecord = AttendanceRecord::where('user_id', $user->id)
+                ->whereDate('date', today())
+                ->first();
 
-        // 退勤
-        elseif ($action === 'clock_out') {
-
-            // 勤怠レコードが存在する場合
-            if ($attendanceRecord) {
-                $attendanceRecord->update([
-                    'clock_out' => now()->format('H:i:s'),
-                ]);
-            }
-        }
-
-        // 休憩入
-        elseif ($action === 'break_in') {
-
-            // 勤怠レコードが存在する場合
-            if ($attendanceRecord) {
-                AttendanceBreak::create([
-                    'attendance_record_id' => $attendanceRecord->id,
-                    'break_in' => now()->format('H:i:s'),
-                ]);
-            }
-        }
-
-        // 休憩戻
-        elseif ($action === 'break_out') {
-
-            // 勤怠レコードが存在する場合
-            if ($attendanceRecord) {
-
-                // 終了していない最新の休憩を取得する
-                $break = AttendanceBreak::where(
+            // 当日に承認待ちの修正申請があるか確認する
+            $hasPendingApplication = $attendanceRecord
+                && AttendanceCorrect::where(
                     'attendance_record_id',
                     $attendanceRecord->id
                 )
-                    ->whereNull('break_out')
-                    ->latest()
-                    ->first();
+                    ->where('approval_status', false)
+                    ->exists();
 
-                // 対象の休憩が存在する場合
-                if ($break) {
-                    $break->update([
-                        'break_out' => now()->format('H:i:s'),
+            // 承認待ちの修正申請がある場合は打刻を変更しない
+            if ($hasPendingApplication) {
+                return;
+            }
+
+            // 出勤操作の場合
+            if ($action === 'clock_in') {
+
+                // 当日の勤怠レコードが存在しない場合
+                if (!$attendanceRecord) {
+
+                    // 新しい勤怠レコードを作成する
+                    AttendanceRecord::create([
+                        'user_id' => $user->id,
+                        'date' => today(),
+                        'clock_in' => now()->format('H:i:s'),
+                    ]);
+
+                // 空欄の勤怠レコードが存在する場合
+                } elseif (!$attendanceRecord->clock_in) {
+
+                    // 既存の勤怠レコードに出勤時刻を保存する
+                    $attendanceRecord->update([
+                        'clock_in' => now()->format('H:i:s'),
                     ]);
                 }
             }
-        }
+
+            // 退勤操作の場合
+            elseif ($action === 'clock_out') {
+
+                // 出勤済みかつ未退勤の場合のみ退勤を保存する
+                if (
+                    $attendanceRecord
+                    && $attendanceRecord->clock_in
+                    && !$attendanceRecord->clock_out
+                ) {
+                    // 退勤時刻を保存する
+                    $attendanceRecord->update([
+                        'clock_out' => now()->format('H:i:s'),
+                    ]);
+                }
+            }
+
+            // 休憩開始操作の場合
+            elseif ($action === 'break_in') {
+
+                // 出勤済みかつ未退勤の場合
+                if (
+                    $attendanceRecord
+                    && $attendanceRecord->clock_in
+                    && !$attendanceRecord->clock_out
+                ) {
+
+                    // 終了していない休憩が存在するか確認する
+                    $hasOpenBreak = $attendanceRecord->breaks()
+                        ->whereNull('break_out')
+                        ->exists();
+
+                    // 休憩中でなければ新しい休憩を作成する
+                    if (!$hasOpenBreak) {
+
+                        // 休憩開始時刻を保存する
+                        AttendanceBreak::create([
+                            'attendance_record_id' => $attendanceRecord->id,
+                            'break_in' => now()->format('H:i:s'),
+                        ]);
+                    }
+                }
+            }
+
+            // 休憩終了操作の場合
+            elseif ($action === 'break_out') {
+
+                // 出勤済みかつ未退勤の場合
+                if (
+                    $attendanceRecord
+                    && $attendanceRecord->clock_in
+                    && !$attendanceRecord->clock_out
+                ) {
+
+                    // 終了していない最新の休憩を取得する
+                    $break = AttendanceBreak::where(
+                        'attendance_record_id',
+                        $attendanceRecord->id
+                    )
+                        ->whereNull('break_out')
+                        ->latest()
+                        ->first();
+
+                    // 対象の休憩が存在する場合
+                    if ($break) {
+
+                        // 休憩終了時刻を保存する
+                        $break->update([
+                            'break_out' => now()->format('H:i:s'),
+                        ]);
+                    }
+                }
+            }
+        });
 
         // 勤怠打刻画面に戻る
         return redirect('/attendance');
@@ -160,76 +224,118 @@ class AttendanceController extends Controller
             ? Carbon::parse($request->date)
             : Carbon::today();
 
+        // 表示する月の初日を取得する
+        $startDate = $date->copy()->startOfMonth();
+
+        // 表示する月の末日を取得する
+        $endDate = $date->copy()->endOfMonth();
+
         // 前月を取得する
         $previousMonth = $date->copy()
-            ->subMonth()
+            ->subMonthNoOverflow()
             ->format('Y-m');
 
         // 翌月を取得する
         $nextMonth = $date->copy()
-            ->addMonth()
+            ->addMonthNoOverflow()
             ->format('Y-m');
 
-        // ログインユーザーの指定月の勤怠を休憩情報と一緒に取得する
+        // ログインユーザーの指定月の勤怠を取得する
         $attendanceRecords = AttendanceRecord::with('breaks')
             ->where('user_id', $user->id)
-            ->whereYear('date', $date->year)
-            ->whereMonth('date', $date->month)
-            ->get();
+            ->whereBetween('date', [
+                $startDate->toDateString(),
+                $endDate->toDateString(),
+            ])
+            ->get()
 
-        // 勤怠データを画面表示用の配列に変換する
-        $formattedAttendanceRecords = $attendanceRecords->map(
-            function (AttendanceRecord $attendance): array {
+            // 日付をキーにして勤怠を検索できるようにする
+            ->keyBy(function (AttendanceRecord $attendance): string {
 
-                // Modelから合計休憩時間（分）を取得する
-                $totalBreakMinutes = $attendance->total_break_minutes;
+                // 勤怠の日付をYYYY-MM-DD形式で返す
+                return $attendance->date->format('Y-m-d');
+            });
 
-                // 合計休憩時間をCarbonで扱える形式に変換する
-                $totalBreakTime = Carbon::createFromTime(0, 0)
-                    ->addMinutes($totalBreakMinutes);
+        // 一覧表示用の配列を用意する
+        $formattedAttendanceRecords = [];
 
-                // 実働時間の初期値を設定する
-                $totalTime = null;
+        // 月初から月末まで1日ずつ処理する
+        for (
+            $day = $startDate->copy();
+            $day->lte($endDate);
+            $day->addDay()
+        ) {
 
-                // 出勤・退勤時刻が両方登録されている場合
-                if ($attendance->clock_in && $attendance->clock_out) {
+            // 処理中の日付を文字列で取得する
+            $dayString = $day->format('Y-m-d');
 
-                    // 出勤時刻を取得する
-                    $clockIn = Carbon::parse($attendance->clock_in);
+            // その日の勤怠レコードを取得する
+            $attendance = $attendanceRecords->get($dayString);
 
-                    // 退勤時刻を取得する
-                    $clockOut = Carbon::parse($attendance->clock_out);
+            // 勤怠レコードが存在しない場合
+            if (!$attendance) {
 
-                    // 実働時間から休憩時間を差し引く
-                    $totalWorkMinutes = $clockIn->diffInMinutes($clockOut)
-                        - $totalBreakMinutes;
-
-                    // 実働時間をCarbonで扱える形式に変換する
-                    $totalTime = Carbon::createFromTime(0, 0)
-                        ->addMinutes($totalWorkMinutes);
-                }
-
-                // Bladeに渡す勤怠情報を配列にまとめる
-                return [
-                    'id' => $attendance->id,
-
-                    'date' => Carbon::parse($attendance->date)
-                        ->format('m/d'),
-
-                    'clock_in' => $attendance->clock_in
-                        ? Carbon::parse($attendance->clock_in)->format('H:i')
-                        : '',
-
-                    'clock_out' => $attendance->clock_out
-                        ? Carbon::parse($attendance->clock_out)->format('H:i')
-                        : '',
-
-                    'total_break_time' => $totalBreakTime,
-
-                    'total_time' => $totalTime,
+                // 日付形式のIDと空欄の勤怠情報を設定する
+                $formattedAttendanceRecords[] = [
+                    'id' => $dayString,
+                    'date' => $day->format('m/d'),
+                    'clock_in' => '',
+                    'clock_out' => '',
+                    'total_break_time' => null,
+                    'total_time' => null,
                 ];
+
+                // 次の日付に進む
+                continue;
             }
-        )->toArray();
+
+            // Modelから合計休憩時間を取得する
+            $totalBreakMinutes = $attendance->total_break_minutes;
+
+            // 合計休憩時間をCarbonオブジェクトに変換する
+            $totalBreakTime = Carbon::createFromTime(0, 0)
+                ->addMinutes($totalBreakMinutes);
+
+            // 実働時間の初期値を設定する
+            $totalTime = null;
+
+            // 出勤・退勤時刻が両方登録されている場合
+            if ($attendance->clock_in && $attendance->clock_out) {
+
+                // 出勤時刻を取得する
+                $clockIn = Carbon::parse($attendance->clock_in);
+
+                // 退勤時刻を取得する
+                $clockOut = Carbon::parse($attendance->clock_out);
+
+                // 休憩時間を差し引いて実働時間を計算する
+                $totalWorkMinutes = $clockIn->diffInMinutes($clockOut)
+                    - $totalBreakMinutes;
+
+                // 実働時間をCarbonオブジェクトに変換する
+                $totalTime = Carbon::createFromTime(0, 0)
+                    ->addMinutes($totalWorkMinutes);
+            }
+
+            // 勤怠が存在する日の表示情報を作成する
+            $formattedAttendanceRecords[] = [
+                'id' => $attendance->id,
+
+                'date' => $day->format('m/d'),
+
+                'clock_in' => $attendance->clock_in
+                    ? Carbon::parse($attendance->clock_in)->format('H:i')
+                    : '',
+
+                'clock_out' => $attendance->clock_out
+                    ? Carbon::parse($attendance->clock_out)->format('H:i')
+                    : '',
+
+                'total_break_time' => $totalBreakTime,
+
+                'total_time' => $totalTime,
+            ];
+        }
 
         // 勤怠一覧画面を表示する
         return view('user.user-attendance-list', compact(
@@ -243,13 +349,58 @@ class AttendanceController extends Controller
     /**
      * 指定された勤怠の詳細画面を表示する。
      *
-     * @param int $id 勤怠レコードのID
-     * @return View 勤怠詳細画面
+     * @param int|string $id 勤怠IDまたはYYYY-MM-DD形式の日付
+     * @return View|RedirectResponse 勤怠詳細画面またはリダイレクト
      */
-    public function show(int $id): View
+    public function show(int|string $id): View|RedirectResponse
     {
         // ログイン中のユーザーを取得する
         $user = Auth::user();
+
+        // 日付形式のIDが指定された場合
+        if (!ctype_digit((string) $id)) {
+
+            // 指定された日付を厳密に解析する
+            $date = \DateTimeImmutable::createFromFormat('!Y-m-d', (string) $id);
+
+            // 正しい日付でなければ404エラーにする
+            abort_unless(
+                $date !== false
+                    && $date->format('Y-m-d') === (string) $id,
+                404
+            );
+
+            // 指定された日付の勤怠レコードを取得する
+            $attendanceRecord = AttendanceRecord::with('breaks')
+                ->where('user_id', $user->id)
+                ->whereDate('date', $id)
+                ->first();
+
+            // すでに勤怠レコードが存在する場合
+            if ($attendanceRecord) {
+
+                // 数値IDの詳細画面へ移動する
+                return redirect('/attendance/' . $attendanceRecord->id);
+            }
+
+            // 日付をCarbonオブジェクトに変換する
+            $displayDate = Carbon::parse($id);
+
+            // 未出勤日の詳細表示用データを作成する
+            $data = [
+                'id' => $id,
+                'year' => $displayDate->format('Y年'),
+                'date' => $displayDate->format('n月j日'),
+                'clock_in' => '',
+                'clock_out' => '',
+                'breaks' => [],
+                'comment' => '',
+                'application' => null,
+            ];
+
+            // 未出勤日の勤怠詳細画面を表示する
+            return view('user.user-detail', compact('user', 'data'));
+        }
 
         // ログイン中のユーザー本人の勤怠だけ取得する
         $attendanceRecord = AttendanceRecord::with('breaks')
@@ -284,6 +435,8 @@ class AttendanceController extends Controller
             // 申請された休憩データを表示用に変換する
             $breaks = $application->breakCorrects->map(
                 function (BreakCorrect $break): array {
+
+                    // 休憩時刻を表示用の配列にまとめる
                     return [
                         'break_in' => $break->break_in
                             ? Carbon::parse($break->break_in)->format('H:i')
@@ -302,6 +455,8 @@ class AttendanceController extends Controller
             // 元の休憩データを表示用に変換する
             $breaks = $attendanceRecord->breaks->map(
                 function (AttendanceBreak $break): array {
+
+                    // 休憩時刻を表示用の配列にまとめる
                     return [
                         'break_in' => $break->break_in
                             ? Carbon::parse($break->break_in)->format('H:i')
@@ -321,7 +476,9 @@ class AttendanceController extends Controller
         // Bladeに渡す勤怠詳細データを作成する
         $data = [
             'id' => $attendanceRecord->id,
+
             'year' => $date->format('Y年'),
+
             'date' => $date->format('n月j日'),
 
             'clock_in' => $displayClockIn
@@ -333,7 +490,9 @@ class AttendanceController extends Controller
                 : '',
 
             'breaks' => $breaks,
+
             'comment' => $displayMemo ?? '',
+
             'application' => $application,
         ];
 
@@ -345,82 +504,148 @@ class AttendanceController extends Controller
      * 勤怠修正申請と休憩修正内容を保存する。
      *
      * @param AttendanceCorrectionRequest $request バリデーション済みの申請リクエスト
-     * @param int $id 修正対象の勤怠レコードID
+     * @param int|string $id 勤怠IDまたはYYYY-MM-DD形式の日付
      * @return RedirectResponse 勤怠詳細画面へのリダイレクト
      */
     public function requestCorrection(
         AttendanceCorrectionRequest $request,
-        int $id
+        int|string $id
     ): RedirectResponse {
+
         // ログイン中のユーザーを取得する
         $user = Auth::user();
-
-        // ログイン中のユーザー本人の勤怠だけ取得する
-        $attendanceRecord = AttendanceRecord::where('user_id', $user->id)
-            ->findOrFail($id);
-
-        // 承認待ちの申請がある場合は、新しい申請を作成しない
-        $hasPendingApplication = AttendanceCorrect::where(
-            'attendance_record_id',
-            $attendanceRecord->id
-        )
-            ->where('approval_status', false)
-            ->exists();
-
-        // 承認待ちの申請が存在する場合
-        if ($hasPendingApplication) {
-
-            // 勤怠詳細画面に戻る
-            return redirect('/attendance/' . $id);
-        }
 
         // バリデーション済みの入力値を取得する
         $validated = $request->validated();
 
-        // 勤怠修正申請を保存する
-        $application = AttendanceCorrect::create([
-            'attendance_record_id' => $attendanceRecord->id,
-            'clock_in' => $validated['new_clock_in'],
-            'clock_out' => $validated['new_clock_out'],
-            'comment' => $validated['comment'],
-            'approval_status' => false,
-            'requested_at' => now(),
-        ]);
+        // 保存後の勤怠IDを格納する変数を用意する
+        $attendanceId = null;
 
-        // 休憩開始時刻の配列を取得する
-        $breakIns = $validated['new_break_in'] ?? [];
+        // 勤怠レコードと修正申請をまとめて保存する
+        DB::transaction(function () use (
+            $user,
+            $id,
+            $validated,
+            &$attendanceId
+        ): void {
 
-        // 休憩終了時刻の配列を取得する
-        $breakOuts = $validated['new_break_out'] ?? [];
+            // 同じユーザーの同時申請を防ぐためユーザー行をロックする
+            $user->newQuery()
+                ->whereKey($user->id)
+                ->lockForUpdate()
+                ->firstOrFail();
 
-        // 休憩開始時刻の配列をCollectionに変換する
-        collect($breakIns)
+            // 数値IDが指定された場合
+            if (ctype_digit((string) $id)) {
 
-            // 開始・終了が両方空の休憩データを除外する
-            ->filter(function ($breakIn, $index) use ($breakOuts): bool {
+                // 本人の勤怠レコードだけを取得する
+                $attendanceRecord = AttendanceRecord::where(
+                    'user_id',
+                    $user->id
+                )
+                    ->findOrFail($id);
 
-                // 同じ位置にある休憩終了時刻を取得する
+            // 日付形式のIDが指定された場合
+            } else {
+
+                // 指定された日付を厳密に解析する
+                $date = \DateTimeImmutable::createFromFormat(
+                    '!Y-m-d',
+                    (string) $id
+                );
+
+                // 不正な日付の場合は404エラーにする
+                abort_unless(
+                    $date !== false
+                        && $date->format('Y-m-d') === (string) $id,
+                    404
+                );
+
+                // 同じ日付の既存勤怠を取得する
+                $attendanceRecord = AttendanceRecord::where(
+                    'user_id',
+                    $user->id
+                )
+                    ->whereDate('date', $id)
+                    ->first();
+
+                // 勤怠レコードが存在しない場合
+                if (!$attendanceRecord) {
+
+                    // 出退勤時刻が空欄の勤怠レコードを作成する
+                    $attendanceRecord = AttendanceRecord::create([
+                        'user_id' => $user->id,
+                        'date' => $id,
+                        'clock_in' => null,
+                        'clock_out' => null,
+                    ]);
+                }
+            }
+
+            // 保存後のリダイレクト先に使う勤怠IDを取得する
+            $attendanceId = $attendanceRecord->id;
+
+            // 承認待ちの修正申請が存在するか確認する
+            $hasPendingApplication = AttendanceCorrect::where(
+                'attendance_record_id',
+                $attendanceRecord->id
+            )
+                ->where('approval_status', false)
+                ->exists();
+
+            // 承認待ちの申請がある場合
+            if ($hasPendingApplication) {
+
+                // 新しい申請を作成せず処理を終了する
+                return;
+            }
+
+            // 勤怠修正申請を保存する
+            $application = AttendanceCorrect::create([
+                'attendance_record_id' => $attendanceRecord->id,
+                'clock_in' => $validated['new_clock_in'],
+                'clock_out' => $validated['new_clock_out'],
+                'comment' => $validated['comment'],
+                'approval_status' => false,
+                'requested_at' => now(),
+            ]);
+
+            // 休憩開始時刻の配列を取得する
+            $breakIns = $validated['new_break_in'] ?? [];
+
+            // 休憩終了時刻の配列を取得する
+            $breakOuts = $validated['new_break_out'] ?? [];
+
+            // 開始・終了のどちらかに存在するインデックスを取得する
+            $indexes = array_unique(array_merge(
+                array_keys($breakIns),
+                array_keys($breakOuts)
+            ));
+
+            // 休憩データを1件ずつ処理する
+            foreach ($indexes as $index) {
+
+                // 休憩開始時刻を取得する
+                $breakIn = $breakIns[$index] ?? null;
+
+                // 休憩終了時刻を取得する
                 $breakOut = $breakOuts[$index] ?? null;
 
-                // 開始・終了のどちらかに値があれば残す
-                return !blank($breakIn) || !blank($breakOut);
-            })
-
-            // 残った休憩データを1件ずつ保存する
-            ->each(function ($breakIn, $index) use ($breakOuts, $application): void {
-
-                // 同じ位置にある休憩終了時刻を取得する
-                $breakOut = $breakOuts[$index] ?? null;
+                // 両方空欄の場合は保存しない
+                if (blank($breakIn) && blank($breakOut)) {
+                    continue;
+                }
 
                 // 休憩修正データを保存する
                 $application->breakCorrects()->create([
-                    'break_in' => $breakIn ?: null,
-                    'break_out' => $breakOut ?: null,
+                    'break_in' => filled($breakIn) ? $breakIn : null,
+                    'break_out' => filled($breakOut) ? $breakOut : null,
                 ]);
-            });
+            }
+        });
 
-        // 修正申請の保存後、勤怠詳細画面に戻る
-        return redirect('/attendance/' . $id);
+        // 保存後は数値IDの勤怠詳細画面へ移動する
+        return redirect('/attendance/' . $attendanceId);
     }
 
     /**

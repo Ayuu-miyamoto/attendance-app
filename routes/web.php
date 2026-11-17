@@ -16,6 +16,8 @@ use Laravel\Fortify\Http\Controllers\AuthenticatedSessionController;
 
 // 会員登録画面
 Route::get('/register', function () {
+
+    // 会員登録画面のBladeを返す
     return view('user.register');
 });
 
@@ -56,28 +58,31 @@ Route::get('/attendance/report', [
 // 一般ユーザー・管理者共通
 // ==================================================================================
 
-// 一般ユーザー・管理者共通の勤怠詳細画面
-Route::get('/attendance/{id}', function (int $id) {
+// 勤怠詳細画面への振り分け
+Route::get('/attendance/{id}', function (string $id) {
 
     // 管理者としてログインしている場合
     if (Auth::guard('admin')->check()) {
+
+        // 管理者は数値IDだけを使用できるようにする
+        abort_unless(ctype_digit($id), 404);
 
         // 管理者ガードを使用する
         Auth::shouldUse('admin');
 
         // 管理者用の勤怠詳細画面を表示する
-        return app(AdminAttendanceController::class)->show($id);
+        return app(AdminAttendanceController::class)->show((int) $id);
     }
 
     // 一般ユーザーとしてログインしている場合
     if (Auth::guard('web')->check()) {
 
-        // ログイン中のユーザーをUserモデルとして取得する
+        // ログイン中のユーザーを取得する
         /** @var User $user */
         $user = Auth::guard('web')->user();
 
         // メール認証が完了していない場合は認証案内画面へ移動する
-        if (! $user->hasVerifiedEmail()) {
+        if (!$user->hasVerifiedEmail()) {
             return redirect()->route('verification.notice');
         }
 
@@ -91,13 +96,16 @@ Route::get('/attendance/{id}', function (int $id) {
     // 未ログインの場合はログイン画面へ移動する
     return redirect('/login');
 
-})->whereNumber('id');
+})->where('id', '[0-9]+|[0-9]{4}-[0-9]{2}-[0-9]{2}');
 
 // 勤怠修正処理
-Route::post('/attendance/{id}', function (int $id) {
+Route::post('/attendance/{id}', function (string $id) {
 
     // 管理者としてログインしている場合
     if (Auth::guard('admin')->check()) {
+
+        // 管理者は数値IDだけを使用できるようにする
+        abort_unless(ctype_digit($id), 404);
 
         // 管理者ガードを使用する
         Auth::shouldUse('admin');
@@ -105,19 +113,19 @@ Route::post('/attendance/{id}', function (int $id) {
         // 管理者は勤怠データを直接更新する
         return app()->call(
             [app(AdminAttendanceController::class), 'update'],
-            ['id' => $id]
+            ['id' => (int) $id]
         );
     }
 
     // 一般ユーザーとしてログインしている場合
     if (Auth::guard('web')->check()) {
 
-        // ログイン中のユーザーをUserモデルとして取得する
+        // ログイン中のユーザーを取得する
         /** @var User $user */
         $user = Auth::guard('web')->user();
 
         // メール認証が完了していない場合は認証案内画面へ移動する
-        if (! $user->hasVerifiedEmail()) {
+        if (!$user->hasVerifiedEmail()) {
             return redirect()->route('verification.notice');
         }
 
@@ -131,10 +139,10 @@ Route::post('/attendance/{id}', function (int $id) {
         );
     }
 
-    // 未ログインの場合はログイン画面へ
+    // 未ログインの場合はログイン画面へ移動する
     return redirect('/login');
 
-})->whereNumber('id');
+})->where('id', '[0-9]+|[0-9]{4}-[0-9]{2}-[0-9]{2}');
 
 
 // ==================================================================================
@@ -158,12 +166,12 @@ Route::get('/stamp_correction_request/list', function () {
     // 一般ユーザーとしてログインしている場合
     if (Auth::guard('web')->check()) {
 
-        // ログイン中のユーザーをUserモデルとして取得する
+        // ログイン中のユーザーを取得する
         /** @var User $user */
         $user = Auth::guard('web')->user();
 
         // メール認証が完了していない場合は認証案内画面へ移動する
-        if (! $user->hasVerifiedEmail()) {
+        if (!$user->hasVerifiedEmail()) {
             return redirect()->route('verification.notice');
         }
 
@@ -175,7 +183,7 @@ Route::get('/stamp_correction_request/list', function () {
             ->correctionRequestList();
     }
 
-    // 未ログインの場合はログイン画面へ
+    // 未ログインの場合はログイン画面へ移動する
     return redirect('/login');
 });
 
@@ -194,12 +202,12 @@ Route::get('/application/{id}', function (int $id) {
     // 一般ユーザーとしてログインしている場合
     if (Auth::guard('web')->check()) {
 
-        // ログイン中のユーザーをUserモデルとして取得する
+        // ログイン中のユーザーを取得する
         /** @var User $user */
         $user = Auth::guard('web')->user();
 
         // メール認証が完了していない場合は認証案内画面へ移動する
-        if (! $user->hasVerifiedEmail()) {
+        if (!$user->hasVerifiedEmail()) {
             return redirect()->route('verification.notice');
         }
 
@@ -221,7 +229,7 @@ Route::get('/application/{id}', function (int $id) {
         );
     }
 
-    // 未ログインの場合はログイン画面へ
+    // 未ログインの場合はログイン画面へ移動する
     return redirect('/login');
 
 })->whereNumber('id');
@@ -233,6 +241,8 @@ Route::get('/application/{id}', function (int $id) {
 
 // 管理者ログイン画面
 Route::get('/admin/login', function () {
+
+    // 管理者ログイン画面のBladeを返す
     return view('admin.admin-login');
 });
 
