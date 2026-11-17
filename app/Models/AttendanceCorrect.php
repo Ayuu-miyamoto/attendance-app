@@ -194,8 +194,13 @@ class AttendanceCorrect extends Model
      */
     public function getNewClockInAttribute(): ?string
     {
-        // 保存されている出勤時刻を返す
-        return $this->attributes['clock_in'] ?? null;
+        // 保存されている出勤時刻を取得する
+        $clockIn = $this->attributes['clock_in'] ?? null;
+
+        // 時刻が存在すれば時:分形式に変換して返す
+        return $clockIn
+            ? Carbon::parse($clockIn)->format('H:i')
+            : null;
     }
 
     /**
@@ -205,8 +210,13 @@ class AttendanceCorrect extends Model
      */
     public function getNewClockOutAttribute(): ?string
     {
-        // 保存されている退勤時刻を返す
-        return $this->attributes['clock_out'] ?? null;
+        // 保存されている退勤時刻を取得する
+        $clockOut = $this->attributes['clock_out'] ?? null;
+
+        // 時刻が存在すれば時:分形式に変換して返す
+        return $clockOut
+            ? Carbon::parse($clockOut)->format('H:i')
+            : null;
     }
 
     /**

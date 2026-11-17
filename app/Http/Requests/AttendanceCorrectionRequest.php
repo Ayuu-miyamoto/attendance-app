@@ -49,15 +49,15 @@ class AttendanceCorrectionRequest extends FormRequest
     {
         // 各バリデーションエラーに対応する日本語メッセージを返す
         return [
-            'new_clock_in.required' => '出勤時間もしくは退勤時間が不適切な値です。',
-            'new_clock_in.date_format' => '出勤時間もしくは退勤時間が不適切な値です。',
-            'new_clock_out.required' => '出勤時間もしくは退勤時間が不適切な値です。',
-            'new_clock_out.date_format' => '出勤時間もしくは退勤時間が不適切な値です。',
+            'new_clock_in.required' => '出勤時間もしくは退勤時間が不適切な値です',
+            'new_clock_in.date_format' => '出勤時間もしくは退勤時間が不適切な値です',
+            'new_clock_out.required' => '出勤時間もしくは退勤時間が不適切な値です',
+            'new_clock_out.date_format' => '出勤時間もしくは退勤時間が不適切な値です',
 
-            'new_break_in.*.date_format' => '休憩時間が不適切な値です。',
-            'new_break_out.*.date_format' => '休憩時間が不適切な値です。',
+            'new_break_in.*.date_format' => '休憩時間が不適切な値です',
+            'new_break_out.*.date_format' => '休憩時間が不適切な値です',
 
-            'comment.required' => '備考を記入してください。',
+            'comment.required' => '備考を記入してください',
         ];
     }
 
@@ -86,7 +86,7 @@ class AttendanceCorrectionRequest extends FormRequest
             ) {
                 $validator->errors()->add(
                     'new_clock_out',
-                    '出勤時間もしくは退勤時間が不適切な値です。'
+                    '出勤時間もしくは退勤時間が不適切な値です'
                 );
             }
 
@@ -124,7 +124,7 @@ class AttendanceCorrectionRequest extends FormRequest
                     ) {
                         $validator->errors()->add(
                             "new_break_out.$index",
-                            '休憩時間が不適切な値です。'
+                            '休憩時間が不適切な値です'
                         );
                     }
 
@@ -135,7 +135,7 @@ class AttendanceCorrectionRequest extends FormRequest
                     ) {
                         $validator->errors()->add(
                             "new_break_in.$index",
-                            '休憩時間が不適切な値です。'
+                            '休憩時間が不適切な値です'
                         );
                     }
 
@@ -147,7 +147,7 @@ class AttendanceCorrectionRequest extends FormRequest
                     ) {
                         $validator->errors()->add(
                             "new_break_out.$index",
-                            '休憩時間もしくは退勤時間が不適切な値です。'
+                            '休憩時間もしくは退勤時間が不適切な値です'
                         );
                     }
                 });

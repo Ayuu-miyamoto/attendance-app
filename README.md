@@ -1,8 +1,12 @@
 # COACHTECH 勤怠管理アプリ
 
-一般ユーザーが出勤・退勤・休憩の打刻、勤怠一覧の確認、勤怠修正申請を行えるアプリ。
+Laravel 10を使用して作成した勤怠管理アプリです。
 
-管理者はスタッフの勤怠情報の確認、勤怠修正申請の承認、スタッフ別の月次勤怠データのCSV出力を行うことができる。
+一般ユーザーは出勤・退勤・休憩の打刻、勤怠一覧の確認、勤怠修正申請を行うことができます。
+
+管理者はスタッフの勤怠情報の確認・修正、勤怠修正申請の承認、スタッフ別の月次勤怠一覧の確認、CSV出力を行うことができます。
+
+また、新規会員登録時のメール認証、一般ユーザーが自分の勤怠統計レポートを確認することができるマイ勤怠レポート、勤怠情報を操作するAPIも実装しています。
 
 ## 作成者
 
@@ -10,34 +14,31 @@
 
 ## 使用技術
 
-- Laravel Framework 10.50.3
 - PHP 8.2
+- Laravel 10.50
 - MySQL 8.4
-- Composer 2.10.1
-- Laravel Sail
-- Docker Desktop
-- Laravel Fortify
-- Vite
+- Docker 
+- Docker Compose 
+- Laravel Sail 
+- Laravel Fortify（認証・メール認証）
+- Vite 5.4
+- Mailpit（メール認証の動作確認）
+- phpMyAdmin（データベース管理）
 
 ## ER図
 
 ```mermaid
 erDiagram
-    users ||--o{ attendance_records : "has many"
-    attendance_records ||--o{ breaks : "has many"
-    attendance_records ||--o{ attendance_corrects : "has many"
-    attendance_corrects ||--o{ break_correct_applications : "has many"
-
     users {
         bigint_unsigned id PK
         varchar_255 name
         varchar_255 email UK
         timestamp email_verified_at
         varchar_255 password
+        boolean admin_status
         varchar_100 remember_token
         timestamp created_at
         timestamp updated_at
-        boolean admin_status
     }
 
     attendance_records {
@@ -46,9 +47,9 @@ erDiagram
         date date
         time clock_in
         time clock_out
+        text comment 
         timestamp created_at
         timestamp updated_at
-        text comment
     }
 
     breaks {
@@ -65,15 +66,15 @@ erDiagram
         bigint_unsigned attendance_record_id FK
         time clock_in
         time clock_out
-        varchar_255 comment
+        text comment
         boolean approval_status
-        timestamp requested_at
-        timestamp approved_at
         timestamp created_at
         timestamp updated_at
+        timestamp requested_at
+        timestamp approved_at
     }
 
-    break_correct_applications {
+    break_corrects {
         bigint_unsigned id PK
         bigint_unsigned attendance_correct_id FK
         time break_in
@@ -81,58 +82,58 @@ erDiagram
         timestamp created_at
         timestamp updated_at
     }
+
+    users ||--o{ attendance_records : "has many"
+    attendance_records ||--o{ breaks : "has many"
+    attendance_records ||--o{ attendance_corrects : "has many"
+    attendance_corrects ||--o{ break_corrects : "has many"
 ```
 
 ## 開発環境URL
 
-一般ユーザーログイン画面
-
-http://localhost/login
-
-管理者ログイン画面
-
-http://localhost/admin/login
-
-phpMyAdmin
-
-http://localhost:8081
-
-Mailpit（メール確認）
-
-http://localhost:8025
-
-※URLは `compose.yaml` のデフォルトポート設定に基づいています。
+- 会員登録：http://localhost/register
+- 一般ユーザーログイン：http://localhost/login
+- 管理者ログイン：http://localhost/admin/login
+- Mailpit：http://localhost:8025
 
 ## 動作環境
 
-- Docker Desktopがインストールされたパソコン
+- Docker
+- Docker Compose
 - Git
-- PHP 8.5系
-- Composer 2系
+- ターミナル環境（macOS / Linuxなど）
 
 ## 環境構築手順
 
 ### 1. リポジトリをクローン
 
 ```bash
-git clone https://github.com/Ayuu-miyamoto/attendance-app.git
-```
-
-### 2. プロジェクトディレクトリに移動
-
-```bash
+git clone git@github.com:Ayuu-miyamoto/attendance-app.git
 cd attendance-app
 ```
 
+### 2. Composer依存パッケージのインストール
+
+```bash
+docker run --rm \
+    -u "$(id -u):$(id -g)" \
+    -v "$(pwd):/var/www/html" \
+    -w /var/www/html \
+    laravelsail/php82-composer:latest \
+    composer install --ignore-platform-reqs
+```
+
 ### 3. .envファイルの準備
+
+`.env` を作成
 
 ```bash
 cp .env.example .env
 ```
 
-`.env` のデータベース接続設定を以下のように変更する。
+`.env` ファイルのデータベース接続情報を確認・設定します。
 
-```env
+```ini
 DB_CONNECTION=mysql
 DB_HOST=mysql
 DB_PORT=3306
@@ -141,110 +142,83 @@ DB_USERNAME=sail
 DB_PASSWORD=password
 ```
 
-メール送信設定は以下を使用する。
+メール認証の動作確認にMailpitを利用する場合は、メール設定も確認します。
 
-```env
+```ini
 MAIL_MAILER=smtp
 MAIL_HOST=mailpit
 MAIL_PORT=1025
 MAIL_USERNAME=null
 MAIL_PASSWORD=null
 MAIL_ENCRYPTION=null
+MAIL_FROM_ADDRESS="hello@example.com"
+MAIL_FROM_NAME="${APP_NAME}"
 ```
 
-### 4. Composer依存パッケージのインストール
+### 4. Laravel Sailの起動
 
-```bash
-composer install
-```
-
-※ホスト側にPHP 8.5系とComposerがインストールされている環境を想定しています。
-
-### 5. Laravel Sailの起動
+Dockerコンテナを起動します。
 
 ```bash
 ./vendor/bin/sail up -d
 ```
 
-### 6. アプリケーションキーの生成
+### 5. アプリケーションキーの生成
 
 ```bash
 ./vendor/bin/sail artisan key:generate
 ```
 
-### 7. データベースのマイグレーションと初期データ投入
+### 6. データベースのマイグレーションと初期データ投入
+
+以下のコマンドでテーブルを作成し、ダミーデータを投入します。
 
 ```bash
-./vendor/bin/sail artisan migrate --seed
+./vendor/bin/sail artisan migrate:fresh --seed
 ```
 
-### 8. フロントエンドの準備
+データベース接続エラーが発生した場合は、まず `.env` の接続情報とMySQLコンテナの起動状態を確認してください。
+
+```bash
+./vendor/bin/sail ps
+```
+
+### 7. フロントエンドのセットアップ
+
+npmの依存パッケージをインストールします。
 
 ```bash
 ./vendor/bin/sail npm install
 ```
 
-開発サーバーを起動する。
+Viteの開発サーバーを起動します。
 
 ```bash
 ./vendor/bin/sail npm run dev
 ```
 
-※開発サーバーを起動したターミナルはそのままにしておく。
+`npm run dev` は開発中、起動したままにしてください。
 
-### 9. アプリケーションへのアクセス
+### 8. アプリケーションへのアクセス
 
-一般ユーザーログイン画面
+ブラウザで以下のURLにアクセスします。
 
-http://localhost/login
-
-管理者ログイン画面
-
-http://localhost/admin/login
-
-## テストアカウント
-
-| 権限 | ユーザー名 | メールアドレス | パスワード |
-|---|---|---|---|
-| 一般ユーザー | user1 | user1@example.com | password |
-| 一般ユーザー | user2 | user2@example.com | password |
-| 管理者 | user3 | user3@example.com | password |
-
-※テストアカウントは `DatabaseSeeder.php` により作成されます。すべてメール認証済みの状態で登録されます。
-
-## 初期データ
-
-`DatabaseSeeder.php` により、以下の勤怠データが登録されます。
-
-- user1：2026年6月〜10月の各月15日分
-- user1：2026年11月の平日17日分
-- user2：2026年11月の平日17日分
-- user3：2026年11月の平日17日分
-
-user1の2026年11月の勤怠データには、以下の勤務パターンが含まれています。
-
-| 勤務パターン | 日数 |
-|---|---:|
-| 通常勤務（9:00〜18:00） | 10日 |
-| 残業（9:00〜20:00） | 3日 |
-| 遅刻（9:30〜18:00） | 2日 |
-| 早退（9:00〜17:00） | 1日 |
-| 長時間労働（8:00〜21:00） | 1日 |
-
-すべての初期勤怠データには、12:00〜13:00の休憩が登録されています。
+- 会員登録：http://localhost/register
+- 一般ユーザーログイン：http://localhost/login
+- 管理者ログイン：http://localhost/admin/login
 
 ## テスト実行
 
-LaravelのFeatureテストを実行する。
+すべてのテストを実行します。
 
 ```bash
 ./vendor/bin/sail artisan test
 ```
 
-特定のテストのみ実行する場合：
+カバレッジ付きで実行する場合：
 
 ```bash
-./vendor/bin/sail artisan test --filter=AttendanceTest
+./vendor/bin/sail artisan test --coverage
 ```
 
 ## 機能一覧
@@ -254,31 +228,76 @@ LaravelのFeatureテストを実行する。
 - 会員登録
 - ログイン・ログアウト
 - メール認証
-- 出勤・退勤打刻
-- 休憩開始・休憩終了
-- 勤怠ステータス表示
-- 月次勤怠一覧表示
-- 前月・翌月の勤怠表示
-- 勤怠詳細表示
+- 出勤・退勤の打刻
+- 休憩開始・休憩終了の打刻
+- 勤怠ステータスの表示
+- 月次勤怠一覧の表示
+- 前月・翌月の切り替え
+- 勤怠詳細の表示
 - 勤怠修正申請
 - 修正申請一覧（承認待ち・承認済み）
+- マイ勤怠レポート
 
 ### 管理者
 
-- ログイン・ログアウト
-- 日次勤怠一覧表示
-- 前日・翌日の勤怠表示
-- スタッフ勤怠詳細表示
-- スタッフ一覧表示
-- スタッフ別月次勤怠一覧表示
-- 修正申請一覧表示
+- 管理者ログイン・ログアウト
+- 日次勤怠一覧の表示
+- 前日・翌日の切り替え
+- 勤怠詳細の表示
+- 勤怠情報の登録・修正
+- スタッフ一覧の表示
+- スタッフ別月次勤怠一覧の表示
+- 前月・翌月の切り替え
+- CSVエクスポート
+- 勤怠修正申請一覧
 - 勤怠修正申請の承認
-- スタッフ別勤怠データのCSV出力
 
-## 補足事項
+### API
 
-- 認証にはLaravel Fortifyを使用しています。
-- 一般ユーザーと管理者は `admin_status` により権限を判定しています。
-- メール認証にはMailpitを使用しています。
-- 勤怠修正申請は管理者による承認機能を備えています。
-- スタッフ別勤怠データはCSV形式で出力できます。
+- 勤怠レコード一覧取得
+- 勤怠レコード詳細取得
+- 勤怠レコード新規作成
+- 勤怠レコード更新
+- 勤怠レコード削除
+- ユーザーIDによる絞り込み
+
+## 画面URL一覧
+
+### 一般ユーザー
+
+| 画面 | URL |
+|---|---|
+| 会員登録 | /register |
+| ログイン | /login |
+| 勤怠登録 | /attendance |
+| 勤怠一覧 | /attendance/list |
+| 勤怠詳細 | /attendance/{id} |
+| 勤怠修正申請一覧 | /stamp_correction_request/list |
+| マイ勤怠レポート | /attendance/report |
+
+### 管理者
+
+| 画面 | URL |
+|---|---|
+| ログイン | /admin/login |
+| 日次勤怠一覧 | /admin/attendance/list |
+| 勤怠詳細 | /admin/attendance/{id} |
+| スタッフ一覧 | /admin/staff/list |
+| スタッフ別月次勤怠一覧 | /admin/attendance/staff/{id} |
+| 勤怠修正申請一覧 | /stamp_correction_request/list |
+| 勤怠修正申請詳細・承認 | /stamp_correction_request/approve/{attendance_correct_request_id} |
+
+## APIエンドポイント一覧
+
+勤怠情報を操作するAPIを実装しています。
+
+APIは `/api/v1` プレフィックス配下に定義されています。
+
+| HTTPメソッド | URI | 概要 |
+|---|---|---|
+| GET | /api/v1/attendance-records | 勤怠一覧取得 |
+| GET | /api/v1/attendance-records/{attendanceRecord} | 勤怠詳細取得 |
+| POST | /api/v1/attendance-records | 勤怠新規作成 |
+| PUT | /api/v1/attendance-records/{attendanceRecord} | 勤怠更新 |
+| PATCH | /api/v1/attendance-records/{attendanceRecord} | 勤怠部分更新 |
+| DELETE | /api/v1/attendance-records/{attendanceRecord} | 勤怠削除 |
