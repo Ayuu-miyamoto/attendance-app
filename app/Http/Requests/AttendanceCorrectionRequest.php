@@ -139,6 +139,21 @@ class AttendanceCorrectionRequest extends FormRequest
                         );
                     }
 
+                    // 休憩開始が退勤時刻を超える場合はエラーにする
+                    if (
+                        // 退勤時刻が正しい形式であることを確認する
+                        $this->validTime($clockOut) &&
+
+                        // 休憩開始が退勤時刻より後か確認する
+                        $breakIn > $clockOut
+                    ) {
+                        // 休憩開始時刻のエラーを追加する
+                        $validator->errors()->add(
+                            "new_break_in.$index",
+                            '休憩時間が不適切な値です'
+                        );
+                    }
+
                     // 休憩終了が退勤時刻を超える場合はエラーにする
                     if (
                         $this->validTime($breakOut) &&

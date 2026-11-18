@@ -14,7 +14,7 @@ class AttendanceCorrectionTest extends TestCase
     use RefreshDatabase;
 
     /**
-     * ① 出勤時刻が退勤時刻より後の場合、バリデーションエラーになる
+     * 出勤時刻が退勤時刻より後の場合、バリデーションエラーになる
      */
     public function test_clock_in_after_clock_out_is_invalid(): void
     {
@@ -49,7 +49,45 @@ class AttendanceCorrectionTest extends TestCase
     }
 
     /**
-     * ② 休憩終了時刻が退勤時刻より後の場合、バリデーションエラーになる
+     * 休憩開始時刻が退勤時刻より後の場合、
+     * バリデーションエラーになる
+     */
+    public function test_break_in_after_clock_out_is_invalid(): void
+    {
+        // テスト用ユーザーを作成する
+        $user = User::factory()->create();
+
+        // 修正対象の勤怠データを作成する
+        $attendance = AttendanceRecord::create([
+            'user_id' => $user->id,
+            'date' => '2026-10-11',
+            'clock_in' => '09:00:00',
+            'clock_out' => '18:00:00',
+        ]);
+
+        // 休憩開始時刻を退勤時刻より後に設定する
+        $response = $this->actingAs($user)->post(
+            '/attendance/' . $attendance->id,
+            [
+                'new_clock_in' => '09:00',
+                'new_clock_out' => '18:00',
+                'new_break_in' => ['19:00'],
+                'new_break_out' => ['19:30'],
+                'comment' => '休憩開始時間の修正',
+            ]
+        );
+
+        // 休憩開始時刻のバリデーションエラーを確認する
+        $response->assertSessionHasErrors([
+            'new_break_in.0' => '休憩時間が不適切な値です',
+        ]);
+
+        // 不正な修正申請が保存されていないことを確認する
+        $this->assertDatabaseCount('attendance_corrects', 0);
+    }
+
+    /**
+     * 休憩終了時刻が退勤時刻より後の場合、バリデーションエラーになる
      */
     public function test_break_out_after_clock_out_is_invalid(): void
     {
@@ -86,7 +124,7 @@ class AttendanceCorrectionTest extends TestCase
     }
 
     /**
-     * ③ 備考が未入力の場合、バリデーションエラーになる
+     * 備考が未入力の場合、バリデーションエラーになる
      */
     public function test_comment_is_required(): void
     {
@@ -121,7 +159,7 @@ class AttendanceCorrectionTest extends TestCase
     }
 
     /**
-     * ④ 正しい内容で修正申請するとDBに保存される
+     * 正しい内容で修正申請するとDBに保存される
      */
     public function test_attendance_correction_request_is_saved(): void
     {
@@ -181,7 +219,7 @@ class AttendanceCorrectionTest extends TestCase
     }
 
     /**
-     * ⑤ 承認待ちの修正申請が申請一覧に表示される
+     * 承認待ちの修正申請が申請一覧に表示される
      */
     public function test_pending_correction_is_displayed_in_application_list(): void
     {
@@ -234,7 +272,7 @@ class AttendanceCorrectionTest extends TestCase
     }
 
     /**
-     * ⑥ 承認済みの修正申請が申請一覧に表示される
+     * 承認済みの修正申請が申請一覧に表示される
      */
     public function test_approved_correction_is_displayed_in_application_list(): void
     {
@@ -282,7 +320,7 @@ class AttendanceCorrectionTest extends TestCase
     }
 
     /**
-     * ⑦ 申請一覧の詳細リンクから勤怠詳細画面に遷移できる
+     * 申請一覧の詳細リンクから勤怠詳細画面に遷移できる
      */
     public function test_correction_detail_page_can_be_accessed(): void
     {
@@ -330,7 +368,7 @@ class AttendanceCorrectionTest extends TestCase
     }
 
     /**
-     * ⑧ 承認待ちの修正申請がある場合、詳細画面から修正できない
+     * 承認待ちの修正申請がある場合、詳細画面から修正できない
      */
     public function test_pending_correction_disables_editing(): void
     {
@@ -369,7 +407,7 @@ class AttendanceCorrectionTest extends TestCase
     }
 
     /**
-     * ⑨ 承認待ちの修正申請がある場合、重複申請できない
+     * 承認待ちの修正申請がある場合、重複申請できない
      */
     public function test_pending_correction_cannot_be_submitted_twice(): void
     {

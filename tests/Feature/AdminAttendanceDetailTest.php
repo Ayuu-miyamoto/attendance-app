@@ -180,4 +180,151 @@ class AdminAttendanceDetailTest extends TestCase
             'break_out' => '13:00:00',
         ]);
     }
+
+    /**
+     * 休憩開始が退勤時刻より後の場合、バリデーションエラーになる
+     */
+    public function test_admin_break_in_after_clock_out_is_invalid(): void
+    {
+        // 管理者ユーザーを作成する
+        $admin = User::factory()->create([
+            'admin_status' => true,
+        ]);
+
+        // 一般ユーザーを作成する
+        $user = User::factory()->create([
+            'admin_status' => false,
+        ]);
+
+        // 修正対象の勤怠データを作成する
+        $attendance = AttendanceRecord::create([
+            'user_id' => $user->id,
+            'date' => '2026-10-11',
+            'clock_in' => '09:00:00',
+            'clock_out' => '18:00:00',
+        ]);
+
+        // 管理者としてログインする
+        $this->actingAs($admin, 'admin');
+
+        // 休憩開始を退勤時刻より後にして送信する
+        $response = $this->from('/admin/attendance/' . $attendance->id)
+            ->post('/attendance/' . $attendance->id, [
+                'new_clock_in' => '09:00',
+                'new_clock_out' => '18:00',
+                'new_break_in' => ['19:00'],
+                'new_break_out' => ['19:30'],
+                'comment' => '休憩開始時刻の修正',
+            ]);
+
+        // 休憩開始時刻のバリデーションエラーを確認する
+        $response->assertSessionHasErrors([
+            'new_break_in.0' => '休憩時間が不適切な値です',
+        ]);
+
+        // 不正なデータで勤怠が更新されていないことを確認する
+        $this->assertDatabaseHas('attendance_records', [
+            'id' => $attendance->id,
+            'clock_in' => '09:00:00',
+            'clock_out' => '18:00:00',
+        ]);
+    }
+
+    /**
+     * 休憩終了が退勤時刻より後の場合、バリデーションエラーになる
+     */
+    public function test_admin_break_out_after_clock_out_is_invalid(): void
+    {
+        // 管理者ユーザーを作成する
+        $admin = User::factory()->create([
+            'admin_status' => true,
+        ]);
+
+        // 一般ユーザーを作成する
+        $user = User::factory()->create([
+            'admin_status' => false,
+        ]);
+
+        // 修正対象の勤怠データを作成する
+        $attendance = AttendanceRecord::create([
+            'user_id' => $user->id,
+            'date' => '2026-10-11',
+            'clock_in' => '09:00:00',
+            'clock_out' => '18:00:00',
+        ]);
+
+        // 管理者としてログインする
+        $this->actingAs($admin, 'admin');
+
+        // 休憩終了を退勤時刻より後にして送信する
+        $response = $this->from('/admin/attendance/' . $attendance->id)
+            ->post('/attendance/' . $attendance->id, [
+                'new_clock_in' => '09:00',
+                'new_clock_out' => '18:00',
+                'new_break_in' => ['17:00'],
+                'new_break_out' => ['19:00'],
+                'comment' => '休憩終了時刻の修正',
+            ]);
+
+        // 休憩終了時刻のバリデーションエラーを確認する
+        $response->assertSessionHasErrors([
+            'new_break_out.0' => '休憩時間もしくは退勤時間が不適切な値です',
+        ]);
+
+        // 不正なデータで勤怠が更新されていないことを確認する
+        $this->assertDatabaseHas('attendance_records', [
+            'id' => $attendance->id,
+            'clock_in' => '09:00:00',
+            'clock_out' => '18:00:00',
+        ]);
+    }
+
+    /**
+     * 備考が未入力の場合、バリデーションエラーになる
+     */
+    public function test_admin_comment_is_required(): void
+    {
+        // 管理者ユーザーを作成する
+        $admin = User::factory()->create([
+            'admin_status' => true,
+        ]);
+
+        // 一般ユーザーを作成する
+        $user = User::factory()->create([
+            'admin_status' => false,
+        ]);
+
+        // 修正対象の勤怠データを作成する
+        $attendance = AttendanceRecord::create([
+            'user_id' => $user->id,
+            'date' => '2026-10-11',
+            'clock_in' => '09:00:00',
+            'clock_out' => '18:00:00',
+        ]);
+
+        // 管理者としてログインする
+        $this->actingAs($admin, 'admin');
+
+        // 備考を空欄にして送信する
+        $response = $this->from('/admin/attendance/' . $attendance->id)
+            ->post('/attendance/' . $attendance->id, [
+                'new_clock_in' => '09:00',
+                'new_clock_out' => '18:00',
+                'new_break_in' => [],
+                'new_break_out' => [],
+                'comment' => '',
+            ]);
+
+        // 備考のバリデーションエラーを確認する
+        $response->assertSessionHasErrors([
+            'comment' => '備考を記入してください',
+        ]);
+
+        // 不正なデータで勤怠が更新されていないことを確認する
+        $this->assertDatabaseHas('attendance_records', [
+            'id' => $attendance->id,
+            'clock_in' => '09:00:00',
+            'clock_out' => '18:00:00',
+        ]);
+    }
 }
