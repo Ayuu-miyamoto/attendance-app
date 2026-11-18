@@ -26,7 +26,7 @@ class DatabaseSeeder extends Seeder
         ]);
 
         // user2を作成（一般ユーザー）
-        User::create([
+        $user2 = User::create([
             'name' => 'user2',
             'email' => 'user2@example.com',
             'password' => bcrypt('password'),
@@ -35,7 +35,7 @@ class DatabaseSeeder extends Seeder
         ]);
 
         // user3を作成（管理者）
-        User::create([
+        $user3 = User::create([
             'name' => 'user3',
             'email' => 'user3@example.com',
             'password' => bcrypt('password'),
@@ -158,6 +158,65 @@ class DatabaseSeeder extends Seeder
 
             // 翌日に進む
             $date->addDay();
+        }
+
+        // --------------------------------
+        // user2・user3：過去6ヶ月の勤怠
+        // --------------------------------
+
+        // user2とuser3を順番に処理する
+        foreach ([$user2, $user3] as $user) {
+
+            // 5ヶ月前から当月までの6ヶ月分を作成する
+            for ($month = 5; $month >= 0; $month--) {
+
+                // 対象月の月初を取得する
+                $date = $currentMonth->copy()
+                    ->subMonths($month)
+                    ->startOfMonth();
+
+                // 対象月の登録日数を初期化する
+                $count = 0;
+
+                // 各月15日分の勤怠を作成する
+                while ($count < 15) {
+
+                    // 平日の場合だけ勤怠を登録する
+                    if ($date->isWeekday()) {
+
+                        // 勤務パターンに応じて出勤時刻を設定する
+                        $clockIn = $count % 5 === 0
+                            ? '09:30:00'
+                            : '09:00:00';
+
+                        // 勤務パターンに応じて退勤時刻を設定する
+                        $clockOut = $count % 7 === 0
+                            ? '19:00:00'
+                            : '18:00:00';
+
+                        // 勤怠レコードを作成する
+                        $attendance = AttendanceRecord::create([
+                            'user_id' => $user->id,
+                            'date' => $date->format('Y-m-d'),
+                            'clock_in' => $clockIn,
+                            'clock_out' => $clockOut,
+                        ]);
+
+                        // 勤怠レコードに休憩を登録する
+                        AttendanceBreak::create([
+                            'attendance_record_id' => $attendance->id,
+                            'break_in' => '12:00:00',
+                            'break_out' => '13:00:00',
+                        ]);
+
+                        // 登録した勤務日数を増やす
+                        $count++;
+                    }
+
+                    // 翌日に進む
+                    $date->addDay();
+                }
+            }
         }
     }
 }

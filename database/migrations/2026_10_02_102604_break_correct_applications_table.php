@@ -27,6 +27,7 @@ return new class extends Migration
      */
     public function down(): void
     {
-        //
+        // 休憩修正申請テーブルを削除する
+        Schema::dropIfExists('break_correct_applications');
     }
 };

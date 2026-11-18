@@ -35,10 +35,13 @@ erDiagram
         varchar_255 email UK
         timestamp email_verified_at
         varchar_255 password
-        boolean admin_status
+        text two_factor_secret
+        text two_factor_recovery_codes
+        timestamp two_factor_confirmed_at
         varchar_100 remember_token
         timestamp created_at
         timestamp updated_at
+        boolean admin_status
     }
 
     attendance_records {
@@ -47,9 +50,9 @@ erDiagram
         date date
         time clock_in
         time clock_out
-        text comment 
         timestamp created_at
         timestamp updated_at
+        text comment
     }
 
     breaks {
@@ -68,13 +71,13 @@ erDiagram
         time clock_out
         text comment
         boolean approval_status
-        timestamp created_at
-        timestamp updated_at
         timestamp requested_at
         timestamp approved_at
+        timestamp created_at
+        timestamp updated_at
     }
 
-    break_corrects {
+    break_correct_applications {
         bigint_unsigned id PK
         bigint_unsigned attendance_correct_id FK
         time break_in
@@ -86,7 +89,7 @@ erDiagram
     users ||--o{ attendance_records : "has many"
     attendance_records ||--o{ breaks : "has many"
     attendance_records ||--o{ attendance_corrects : "has many"
-    attendance_corrects ||--o{ break_corrects : "has many"
+    attendance_corrects ||--o{ break_correct_applications : "has many"
 ```
 
 ## 開発環境URL
@@ -96,6 +99,21 @@ erDiagram
 - 管理者ログイン：http://localhost/admin/login
 - phpMyAdmin：http://localhost:8080
 - Mailpit：http://localhost:8025
+
+## テスト用ログイン情報
+
+環境構築時に `./vendor/bin/sail artisan migrate:fresh --seed` を実行すると、以下のユーザーが作成されます。
+
+| ユーザー | 権限 | メールアドレス | パスワード |
+|---|---|---|---|
+| ユーザー1 | 一般ユーザー | user1@example.com | password |
+| ユーザー2 | 一般ユーザー | user2@example.com | password |
+| ユーザー3 | 管理者 | user3@example.com | password |
+
+すべてのユーザーはメール認証済みの状態で作成されます。
+
+- 一般ユーザーログイン：http://localhost/login
+- 管理者ログイン：http://localhost/admin/login
 
 ## 動作環境
 

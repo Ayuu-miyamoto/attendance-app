@@ -27,6 +27,7 @@ return new class extends Migration
      */
     public function down(): void
     {
-        //
+        // 休憩テーブルを削除する
+        Schema::dropIfExists('breaks');
     }
 };
