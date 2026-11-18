@@ -2,13 +2,13 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Carbon\Carbon;
 
 class AttendanceCorrect extends Model
 {
@@ -63,8 +63,8 @@ class AttendanceCorrect extends Model
     /**
      * 指定したユーザーの修正申請に絞り込む。
      *
-     * @param Builder $query 検索条件を組み立てるクエリ
-     * @param int $userId ユーザーID
+     * @param  Builder  $query  検索条件を組み立てるクエリ
+     * @param  int  $userId  ユーザーID
      * @return Builder 絞り込み後のクエリ
      */
     public function scopeForUser(Builder $query, int $userId): Builder
@@ -82,7 +82,7 @@ class AttendanceCorrect extends Model
     /**
      * 修正申請に必要な関連データをまとめて取得する設定。
      *
-     * @param Builder $query 検索条件を組み立てるクエリ
+     * @param  Builder  $query  検索条件を組み立てるクエリ
      * @return Builder 関連データの読み込み設定を追加したクエリ
      */
     public function scopeWithCorrectionDetails(Builder $query): Builder
@@ -97,7 +97,7 @@ class AttendanceCorrect extends Model
     /**
      * 承認待ちの修正申請に絞り込む。
      *
-     * @param Builder $query 検索条件を組み立てるクエリ
+     * @param  Builder  $query  検索条件を組み立てるクエリ
      * @return Builder 承認待ちの申請に絞り込んだクエリ
      */
     public function scopePending(Builder $query): Builder
@@ -109,7 +109,7 @@ class AttendanceCorrect extends Model
     /**
      * 承認済みの修正申請に絞り込む。
      *
-     * @param Builder $query 検索条件を組み立てるクエリ
+     * @param  Builder  $query  検索条件を組み立てるクエリ
      * @return Builder 承認済みの申請に絞り込んだクエリ
      */
     public function scopeApproved(Builder $query): Builder
@@ -134,7 +134,7 @@ class AttendanceCorrect extends Model
     /**
      * 指定したユーザーの修正申請一覧を表示用配列に変換する。
      *
-     * @param int $userId ユーザーID
+     * @param  int  $userId  ユーザーID
      * @return array 修正申請一覧の表示用データ
      */
     public static function getFormattedApplications(int $userId): array

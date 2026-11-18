@@ -21,7 +21,7 @@ class AttendanceRecordResource extends JsonResource
             'user_id' => $this->user_id,
 
             // 一覧APIの場合だけユーザー名を返す
-            'user_name' => $this->when(!$isDetail, $this->user?->name),
+            'user_name' => $this->when(! $isDetail, $this->user?->name),
 
             // 詳細APIの場合だけユーザー情報を返す
             'user' => $this->when($isDetail, fn () => new UserResource($this->whenLoaded('user'))),

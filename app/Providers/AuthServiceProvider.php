@@ -20,8 +20,6 @@ class AuthServiceProvider extends ServiceProvider
 
     /**
      * 認証・認可サービスを登録する。
-     *
-     * @return void
      */
     public function boot(): void
     {

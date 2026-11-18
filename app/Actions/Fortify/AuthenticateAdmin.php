@@ -58,7 +58,7 @@ class AuthenticateAdmin
             ]);
 
             // 一般ユーザーだけ認証する
-            if (!Auth::guard('web')->attempt([
+            if (! Auth::guard('web')->attempt([
                 'email' => $credentials['email'],
                 'password' => $credentials['password'],
                 'admin_status' => false,

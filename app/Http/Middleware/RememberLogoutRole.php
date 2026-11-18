@@ -12,7 +12,7 @@ class RememberLogoutRole
     public function handle(Request $request, Closure $next)
     {
         // ログアウト以外のリクエストはそのまま通す
-        if (!$request->isMethod('POST') || !$request->is('logout')) {
+        if (! $request->isMethod('POST') || ! $request->is('logout')) {
             return $next($request);
         }
 

@@ -3,15 +3,15 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\AttendanceCorrectionRequest;
+use App\Models\AttendanceBreak;
 use App\Models\AttendanceCorrect;
 use App\Models\AttendanceRecord;
 use App\Models\User;
-use App\Models\AttendanceBreak;
 use Carbon\Carbon;
-use Illuminate\Http\Request;
-use Illuminate\View\View;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\View\View;
 
 class AdminAttendanceController extends Controller
 {
@@ -78,13 +78,13 @@ class AdminAttendanceController extends Controller
     /**
      * 指定された勤怠の詳細画面を表示する。
      *
-     * @param int|string $id 勤怠IDまたはスタッフIDと日付
+     * @param  int|string  $id  勤怠IDまたはスタッフIDと日付
      * @return View|RedirectResponse 詳細画面またはリダイレクト
      */
     public function show(int|string $id): View|RedirectResponse
     {
         // IDが数値ではない場合は未出勤日の詳細として扱う
-        if (!ctype_digit((string) $id)) {
+        if (! ctype_digit((string) $id)) {
 
             // スタッフIDと日付を分離する
             [$userId, $dateString] = explode('-', (string) $id, 2);
@@ -117,7 +117,7 @@ class AdminAttendanceController extends Controller
             if ($existingAttendance) {
 
                 // 既存の勤怠詳細画面へ移動する
-                return redirect('/attendance/' . $existingAttendance->id);
+                return redirect('/attendance/'.$existingAttendance->id);
             }
 
             // 日付を表示用に変換する
@@ -197,8 +197,8 @@ class AdminAttendanceController extends Controller
     /**
      * 管理者が勤怠情報を登録・修正する。
      *
-     * @param AttendanceCorrectionRequest $request バリデーション済みの入力
-     * @param int|string $id 勤怠IDまたはスタッフIDと日付
+     * @param  AttendanceCorrectionRequest  $request  バリデーション済みの入力
+     * @param  int|string  $id  勤怠IDまたはスタッフIDと日付
      * @return RedirectResponse 保存後の勤怠詳細画面
      */
     public function update(
@@ -219,7 +219,7 @@ class AdminAttendanceController extends Controller
             $attendance->updateAttendance($validated);
 
             // 更新後の詳細画面に戻る
-            return redirect('/admin/attendance/' . $id);
+            return redirect('/admin/attendance/'.$id);
         }
 
         // スタッフIDと日付を分離する
@@ -263,7 +263,7 @@ class AdminAttendanceController extends Controller
                 ->first();
 
             // 勤怠レコードがまだ存在しない場合
-            if (!$attendance) {
+            if (! $attendance) {
 
                 // 出退勤が空欄の勤怠レコードを新規作成する
                 $attendance = AttendanceRecord::create([
@@ -282,7 +282,7 @@ class AdminAttendanceController extends Controller
         });
 
         // 新規登録した勤怠の詳細画面に移動する
-        return redirect('/admin/attendance/' . $attendanceId);
+        return redirect('/admin/attendance/'.$attendanceId);
     }
 
     /**
@@ -399,7 +399,7 @@ class AdminAttendanceController extends Controller
 
         // 承認後に申請詳細画面へ戻る
         return redirect(
-            '/stamp_correction_request/approve/' . $id
+            '/stamp_correction_request/approve/'.$id
         );
     }
 }

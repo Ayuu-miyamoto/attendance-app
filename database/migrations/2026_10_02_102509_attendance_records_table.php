@@ -26,7 +26,7 @@ return new class extends Migration
      */
     public function down(): void
     {
-         // 勤怠テーブルを削除する
+        // 勤怠テーブルを削除する
         Schema::dropIfExists('attendance_records');
     }
 };

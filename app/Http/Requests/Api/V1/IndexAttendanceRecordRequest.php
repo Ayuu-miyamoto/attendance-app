@@ -8,8 +8,6 @@ class IndexAttendanceRecordRequest extends FormRequest
 {
     /**
      * APIへのリクエストを許可する。
-     *
-     * @return bool
      */
     public function authorize(): bool
     {
@@ -19,8 +17,6 @@ class IndexAttendanceRecordRequest extends FormRequest
 
     /**
      * 検索条件とページネーションの入力値を検証する。
-     *
-     * @return array
      */
     public function rules(): array
     {

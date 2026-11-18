@@ -10,7 +10,7 @@ class ApplicationResource extends JsonResource
     /**
      * 勤怠修正申請をAPI用の配列に変換する。
      *
-     * @param Request $request APIリクエスト
+     * @param  Request  $request  APIリクエスト
      * @return array APIレスポンス用のデータ
      */
     public function toArray(Request $request): array

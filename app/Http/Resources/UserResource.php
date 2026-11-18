@@ -10,7 +10,7 @@ class UserResource extends JsonResource
     /**
      * ユーザー情報をAPI用の配列に変換する。
      *
-     * @param Request $request APIリクエスト
+     * @param  Request  $request  APIリクエスト
      * @return array APIレスポンス用のデータ
      */
     public function toArray(Request $request): array

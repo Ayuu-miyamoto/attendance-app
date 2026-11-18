@@ -2,14 +2,14 @@
 
 namespace Tests\Feature;
 
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
-use App\Models\User;
 
 class AuthenticationTest extends TestCase
 {
     use RefreshDatabase;
-    
+
     /**
      * 一般ユーザー（新規登録）
      */
@@ -42,7 +42,7 @@ class AuthenticationTest extends TestCase
         $this->assertDatabaseHas('users', [
             'name' => 'テストユーザー',
             'email' => 'test@example.com',
-        ]); 
+        ]);
     }
 
     // 名前・メールアドレス・パスワードが未入力の場合のバリデーションを確認する
@@ -95,7 +95,7 @@ class AuthenticationTest extends TestCase
         ]);
     }
 
-   // 確認用パスワードが一致しない場合、バリデーションエラーになる
+    // 確認用パスワードが一致しない場合、バリデーションエラーになる
     public function test_user_register_password_confirmation(): void
     {
         // パスワードと確認用パスワードに異なる値を設定する
@@ -112,7 +112,7 @@ class AuthenticationTest extends TestCase
         ]);
     }
 
-    /** 
+    /**
      * 一般ユーザー（ログイン）
      */
 
@@ -133,10 +133,10 @@ class AuthenticationTest extends TestCase
         ]);
 
         // メールアドレスとパスワードが未入力の場合、
-    // 仕様書どおりのエラーメッセージが返されることを確認する
-    $response->assertSessionHasErrors([
-        'email' => 'メールアドレスを入力してください',
-        'password' => 'パスワードを入力してください',
+        // 仕様書どおりのエラーメッセージが返されることを確認する
+        $response->assertSessionHasErrors([
+            'email' => 'メールアドレスを入力してください',
+            'password' => 'パスワードを入力してください',
         ]);
     }
 
@@ -179,9 +179,9 @@ class AuthenticationTest extends TestCase
     }
 
     /**
-    * 管理者（ログイン）
-    */
-    
+     * 管理者（ログイン）
+     */
+
     // ログイン画面を表示できる
     public function test_admin_login_page(): void
     {

@@ -2,11 +2,11 @@
 
 namespace Database\Seeders;
 
-use App\Models\User;
-use App\Models\AttendanceRecord;
 use App\Models\AttendanceBreak;
-use Illuminate\Database\Seeder;
+use App\Models\AttendanceRecord;
+use App\Models\User;
 use Carbon\Carbon;
+use Illuminate\Database\Seeder;
 
 class DatabaseSeeder extends Seeder
 {
@@ -116,22 +116,22 @@ class DatabaseSeeder extends Seeder
                     $clockIn = '09:00:00';
                     $clockOut = '18:00:00';
 
-                // 残業3日
+                    // 残業3日
                 } elseif ($count < 13) {
                     $clockIn = '09:00:00';
                     $clockOut = '20:00:00';
 
-                // 遅刻2日
+                    // 遅刻2日
                 } elseif ($count < 15) {
                     $clockIn = '09:30:00';
                     $clockOut = '18:00:00';
 
-                // 早退1日
+                    // 早退1日
                 } elseif ($count < 16) {
                     $clockIn = '09:00:00';
                     $clockOut = '17:00:00';
 
-                // 長時間労働1日
+                    // 長時間労働1日
                 } else {
                     $clockIn = '08:00:00';
                     $clockOut = '21:00:00';

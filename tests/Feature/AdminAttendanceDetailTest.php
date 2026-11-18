@@ -2,9 +2,9 @@
 
 namespace Tests\Feature;
 
-use App\Models\User;
-use App\Models\AttendanceRecord;
 use App\Models\AttendanceBreak;
+use App\Models\AttendanceRecord;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -47,7 +47,7 @@ class AdminAttendanceDetailTest extends TestCase
 
         // 管理者としてログインして勤怠詳細画面にアクセスする
         $response = $this->actingAs($admin, 'admin')
-            ->get('/admin/attendance/' . $attendance->id);
+            ->get('/admin/attendance/'.$attendance->id);
 
         // 画面が正常に表示されることを確認する
         $response->assertStatus(200);
@@ -101,8 +101,8 @@ class AdminAttendanceDetailTest extends TestCase
         $this->actingAs($admin, 'admin');
 
         // 出勤時刻が退勤時刻より後になるデータを送信する
-        $response = $this->from('/admin/attendance/' . $attendance->id)
-            ->post('/attendance/' . $attendance->id, [
+        $response = $this->from('/admin/attendance/'.$attendance->id)
+            ->post('/attendance/'.$attendance->id, [
                 'new_clock_in' => '19:00',
                 'new_clock_out' => '18:00',
                 'new_break_in' => [],
@@ -112,7 +112,7 @@ class AdminAttendanceDetailTest extends TestCase
 
         // バリデーションエラーで元の画面に戻ることを確認する
         $response->assertRedirect(
-            '/admin/attendance/' . $attendance->id
+            '/admin/attendance/'.$attendance->id
         );
 
         // 出勤・退勤時刻のバリデーションエラーを確認する
@@ -153,7 +153,7 @@ class AdminAttendanceDetailTest extends TestCase
         $this->actingAs($admin, 'admin');
 
         // 正しい勤怠情報を送信する
-        $response = $this->post('/attendance/' . $attendance->id, [
+        $response = $this->post('/attendance/'.$attendance->id, [
             'new_clock_in' => '09:30',
             'new_clock_out' => '18:30',
             'new_break_in' => ['12:00'],
@@ -163,7 +163,7 @@ class AdminAttendanceDetailTest extends TestCase
 
         // 管理者の勤怠詳細画面に戻ることを確認する
         $response->assertRedirect(
-            '/admin/attendance/' . $attendance->id
+            '/admin/attendance/'.$attendance->id
         );
 
         // 出勤・退勤時刻が更新されたことを確認する
@@ -208,8 +208,8 @@ class AdminAttendanceDetailTest extends TestCase
         $this->actingAs($admin, 'admin');
 
         // 休憩開始を退勤時刻より後にして送信する
-        $response = $this->from('/admin/attendance/' . $attendance->id)
-            ->post('/attendance/' . $attendance->id, [
+        $response = $this->from('/admin/attendance/'.$attendance->id)
+            ->post('/attendance/'.$attendance->id, [
                 'new_clock_in' => '09:00',
                 'new_clock_out' => '18:00',
                 'new_break_in' => ['19:00'],
@@ -257,8 +257,8 @@ class AdminAttendanceDetailTest extends TestCase
         $this->actingAs($admin, 'admin');
 
         // 休憩終了を退勤時刻より後にして送信する
-        $response = $this->from('/admin/attendance/' . $attendance->id)
-            ->post('/attendance/' . $attendance->id, [
+        $response = $this->from('/admin/attendance/'.$attendance->id)
+            ->post('/attendance/'.$attendance->id, [
                 'new_clock_in' => '09:00',
                 'new_clock_out' => '18:00',
                 'new_break_in' => ['17:00'],
@@ -306,8 +306,8 @@ class AdminAttendanceDetailTest extends TestCase
         $this->actingAs($admin, 'admin');
 
         // 備考を空欄にして送信する
-        $response = $this->from('/admin/attendance/' . $attendance->id)
-            ->post('/attendance/' . $attendance->id, [
+        $response = $this->from('/admin/attendance/'.$attendance->id)
+            ->post('/attendance/'.$attendance->id, [
                 'new_clock_in' => '09:00',
                 'new_clock_out' => '18:00',
                 'new_break_in' => [],

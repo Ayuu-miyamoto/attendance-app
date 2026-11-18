@@ -15,8 +15,6 @@ class UpdateAttendanceRecordApiTest extends TestCase
 
     /**
      * 認証済みユーザーが自分の勤怠を更新できる。
-     *
-     * @return void
      */
     public function test_authenticated_user_can_update_own_attendance_record(): void
     {
@@ -62,8 +60,6 @@ class UpdateAttendanceRecordApiTest extends TestCase
 
     /**
      * 存在しない勤怠IDを更新すると404を返す。
-     *
-     * @return void
      */
     public function test_nonexistent_attendance_record_returns_404(): void
     {
@@ -91,8 +87,6 @@ class UpdateAttendanceRecordApiTest extends TestCase
 
     /**
      * 未認証ユーザーは勤怠を更新できない。
-     *
-     * @return void
      */
     public function test_unauthenticated_user_cannot_update_attendance_record(): void
     {
@@ -124,8 +118,6 @@ class UpdateAttendanceRecordApiTest extends TestCase
 
     /**
      * 一般ユーザーは他人の勤怠を更新できない。
-     *
-     * @return void
      */
     public function test_user_cannot_update_another_users_attendance_record(): void
     {
@@ -174,8 +166,6 @@ class UpdateAttendanceRecordApiTest extends TestCase
 
     /**
      * 管理者は他ユーザーの勤怠を更新できる。
-     *
-     * @return void
      */
     public function test_admin_can_update_another_users_attendance_record(): void
     {
@@ -218,8 +208,6 @@ class UpdateAttendanceRecordApiTest extends TestCase
 
     /**
      * 同じユーザーの別の勤怠日と重複した場合に422を返す。
-     *
-     * @return void
      */
     public function test_duplicate_attendance_date_returns_validation_error(): void
     {
@@ -270,8 +258,6 @@ class UpdateAttendanceRecordApiTest extends TestCase
 
     /**
      * 更新対象自身の日付は重複エラーにならない。
-     *
-     * @return void
      */
     public function test_own_attendance_date_is_not_treated_as_duplicate(): void
     {
@@ -310,8 +296,6 @@ class UpdateAttendanceRecordApiTest extends TestCase
 
     /**
      * PATCHリクエストでも勤怠を更新できる。
-     *
-     * @return void
      */
     public function test_authenticated_user_can_update_attendance_with_patch(): void
     {
@@ -352,11 +336,8 @@ class UpdateAttendanceRecordApiTest extends TestCase
         ]);
     }
 
-
     /**
      * 退勤時刻だけを送信して更新できる。
-     *
-     * @return void
      */
     public function test_user_can_update_only_clock_out(): void
     {
@@ -399,8 +380,6 @@ class UpdateAttendanceRecordApiTest extends TestCase
 
     /**
      * 出勤時刻だけを更新した場合も既存の退勤時刻と比較する。
-     *
-     * @return void
      */
     public function test_clock_in_only_update_validates_existing_clock_out(): void
     {
@@ -445,8 +424,6 @@ class UpdateAttendanceRecordApiTest extends TestCase
 
     /**
      * 出勤時刻より前の退勤時刻は更新できない。
-     *
-     * @return void
      */
     public function test_clock_out_before_clock_in_returns_validation_error(): void
     {
@@ -488,5 +465,4 @@ class UpdateAttendanceRecordApiTest extends TestCase
             'clock_out' => '18:00:00',
         ]);
     }
-
 }

@@ -2,9 +2,9 @@
 
 namespace Tests\Feature;
 
-use App\Models\User;
-use App\Models\AttendanceRecord;
 use App\Models\AttendanceBreak;
+use App\Models\AttendanceRecord;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -32,7 +32,7 @@ class AttendanceDetailTest extends TestCase
 
         // ログインして勤怠詳細画面を表示する
         $response = $this->actingAs($user)
-            ->get('/attendance/' . $attendance->id);
+            ->get('/attendance/'.$attendance->id);
 
         // 画面が正常に表示されることを確認する
         $response->assertStatus(200);
@@ -59,7 +59,7 @@ class AttendanceDetailTest extends TestCase
 
         // ログインして勤怠詳細画面を表示する
         $response = $this->actingAs($user)
-            ->get('/attendance/' . $attendance->id);
+            ->get('/attendance/'.$attendance->id);
 
         // 画面が正常に表示されることを確認する
         $response->assertStatus(200);
@@ -89,7 +89,7 @@ class AttendanceDetailTest extends TestCase
 
         // ログインして勤怠詳細画面を表示する
         $response = $this->actingAs($user)
-            ->get('/attendance/' . $attendance->id);
+            ->get('/attendance/'.$attendance->id);
 
         // 画面が正常に表示されることを確認する
         $response->assertStatus(200);
@@ -126,7 +126,7 @@ class AttendanceDetailTest extends TestCase
 
         // ログインして勤怠詳細画面を表示する
         $response = $this->actingAs($user)
-            ->get('/attendance/' . $attendance->id);
+            ->get('/attendance/'.$attendance->id);
 
         // 画面が正常に表示されることを確認する
         $response->assertStatus(200);
@@ -137,5 +137,4 @@ class AttendanceDetailTest extends TestCase
         // 休憩終了時刻が13:00と表示されることを確認する
         $response->assertSee('name="new_break_out[0]" value="13:00"', false);
     }
-
 }

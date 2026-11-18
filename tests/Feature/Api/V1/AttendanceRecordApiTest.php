@@ -79,7 +79,7 @@ class AttendanceRecordApiTest extends TestCase
 
         // ユーザー1の勤怠だけを取得する
         $response = $this->getJson(
-            '/api/v1/attendance-records?user_id=' . $user1->id
+            '/api/v1/attendance-records?user_id='.$user1->id
         );
 
         // HTTPステータスが200であることを確認する
@@ -110,7 +110,7 @@ class AttendanceRecordApiTest extends TestCase
 
         // 勤怠詳細APIにGETリクエストを送信する
         $response = $this->getJson(
-            '/api/v1/attendance-records/' . $attendance->id
+            '/api/v1/attendance-records/'.$attendance->id
         );
 
         // HTTPステータスが200であることを確認する

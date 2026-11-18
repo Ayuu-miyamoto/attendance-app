@@ -64,8 +64,7 @@ class AttendanceCorrectionRequest extends FormRequest
     /**
      * 通常のバリデーション後に時刻の前後関係を確認する。
      *
-     * @param Validator $validator バリデーション処理
-     * @return void
+     * @param  Validator  $validator  バリデーション処理
      */
     public function withValidator(Validator $validator): void
     {
@@ -172,13 +171,13 @@ class AttendanceCorrectionRequest extends FormRequest
     /**
      * 時刻がHH:MM形式で正しく入力されているか確認する。
      *
-     * @param mixed $time 確認する時刻
+     * @param  mixed  $time  確認する時刻
      * @return bool 正しい時刻形式かどうか
      */
     private function validTime(mixed $time): bool
     {
         // 文字列以外の場合は不正とする
-        if (!is_string($time)) {
+        if (! is_string($time)) {
             return false;
         }
 

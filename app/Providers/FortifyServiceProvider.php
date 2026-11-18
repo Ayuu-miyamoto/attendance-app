@@ -2,11 +2,11 @@
 
 namespace App\Providers;
 
+use App\Actions\Fortify\AuthenticateAdmin;
 use App\Actions\Fortify\CreateNewUser;
 use App\Actions\Fortify\ResetUserPassword;
 use App\Actions\Fortify\UpdateUserPassword;
 use App\Actions\Fortify\UpdateUserProfileInformation;
-use App\Actions\Fortify\AuthenticateAdmin;
 use App\Models\User;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
@@ -14,8 +14,12 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
-use Laravel\Fortify\Actions\RedirectIfTwoFactorAuthenticatable;
 use Laravel\Fortify\Actions\AttemptToAuthenticate;
+use Laravel\Fortify\Actions\EnsureLoginIsNotThrottled;
+use Laravel\Fortify\Actions\PrepareAuthenticatedSession;
+use Laravel\Fortify\Actions\RedirectIfTwoFactorAuthenticatable;
+use Laravel\Fortify\Contracts\LogoutResponse;
+use Laravel\Fortify\Contracts\RegisterResponse;
 use Laravel\Fortify\Fortify;
 
 class FortifyServiceProvider extends ServiceProvider
@@ -35,13 +39,13 @@ class FortifyServiceProvider extends ServiceProvider
     {
         // ログアウト後のリダイレクト処理を独自クラスに変更する
         $this->app->singleton(
-            \Laravel\Fortify\Contracts\LogoutResponse::class,
+            LogoutResponse::class,
             \App\Http\Responses\LogoutResponse::class
         );
 
         // 会員登録後のレスポンスを独自クラスに変更する
         $this->app->singleton(
-            \Laravel\Fortify\Contracts\RegisterResponse::class,
+            RegisterResponse::class,
             \App\Http\Responses\RegisterResponse::class
         );
 
@@ -84,7 +88,7 @@ class FortifyServiceProvider extends ServiceProvider
                     ->where('admin_status', true)
                     ->first();
 
-            // 一般ユーザーログインの場合
+                // 一般ユーザーログインの場合
             } else {
 
                 // 一般ユーザーだけ取得する
@@ -94,12 +98,12 @@ class FortifyServiceProvider extends ServiceProvider
             }
 
             // ユーザーが存在しない場合は認証失敗とする
-            if (!$user) {
+            if (! $user) {
                 return null;
             }
 
             // パスワードが一致しない場合は認証失敗とする
-            if (!Hash::check($request->input('password', ''), $user->password)) {
+            if (! Hash::check($request->input('password', ''), $user->password)) {
                 return null;
             }
 
@@ -141,11 +145,11 @@ class FortifyServiceProvider extends ServiceProvider
 
             // 認証処理を順番に実行する
             return array_filter([
-                \Laravel\Fortify\Actions\EnsureLoginIsNotThrottled::class,
+                EnsureLoginIsNotThrottled::class,
                 RedirectIfTwoFactorAuthenticatable::class,
                 AuthenticateAdmin::class,
                 AttemptToAuthenticate::class,
-                \Laravel\Fortify\Actions\PrepareAuthenticatedSession::class,
+                PrepareAuthenticatedSession::class,
             ]);
         });
     }

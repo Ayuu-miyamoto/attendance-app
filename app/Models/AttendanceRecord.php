@@ -2,11 +2,11 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -32,15 +32,14 @@ class AttendanceRecord extends Model
     /**
      * 勤怠日をYYYY-MM-DD形式で保存する。
      *
-     * @param string|\DateTimeInterface $value 設定する勤怠日
-     * @return void
+     * @param  string|\DateTimeInterface  $value  設定する勤怠日
      */
     public function setDateAttribute($value): void
     {
         // 勤怠日を日付のみの形式に統一する
         $this->attributes['date'] = Carbon::parse($value)->format('Y-m-d');
     }
-    
+
     /**
      * 勤怠記録に紐づくユーザーを取得する。
      *
@@ -111,7 +110,7 @@ class AttendanceRecord extends Model
         return (int) $this->breaks->sum(function (AttendanceBreak $break): int {
 
             // 開始または終了が未登録の場合は計算しない
-            if (!$break->break_in || !$break->break_out) {
+            if (! $break->break_in || ! $break->break_out) {
                 return 0;
             }
 
@@ -129,7 +128,7 @@ class AttendanceRecord extends Model
     public function getTotalWorkMinutesAttribute(): int
     {
         // 出勤または退勤時刻が未登録の場合
-        if (!$this->clock_in || !$this->clock_out) {
+        if (! $this->clock_in || ! $this->clock_out) {
             return 0;
         }
 
@@ -145,7 +144,7 @@ class AttendanceRecord extends Model
     /**
      * 分単位の時間をHH:MM:SS形式に変換する。
      *
-     * @param int $minutes 変換対象の時間（分）
+     * @param  int  $minutes  変換対象の時間（分）
      * @return string 変換後の時間
      */
     public function formatMinutes(int $minutes): string
@@ -161,8 +160,7 @@ class AttendanceRecord extends Model
     /**
      * 管理者による勤怠修正を行う。
      *
-     * @param array $validated バリデーション済みの修正データ
-     * @return void
+     * @param  array  $validated  バリデーション済みの修正データ
      */
     public function updateAttendance(array $validated): void
     {
@@ -171,8 +169,8 @@ class AttendanceRecord extends Model
 
             // 出勤・退勤時刻を更新する
             $this->update([
-                'clock_in' => $validated['new_clock_in'] . ':00',
-                'clock_out' => $validated['new_clock_out'] . ':00',
+                'clock_in' => $validated['new_clock_in'].':00',
+                'clock_out' => $validated['new_clock_out'].':00',
             ]);
 
             // 既存の休憩データを削除する
@@ -207,11 +205,11 @@ class AttendanceRecord extends Model
                 // 新しい休憩データを登録する
                 $this->breaks()->create([
                     'break_in' => filled($breakIn)
-                        ? $breakIn . ':00'
+                        ? $breakIn.':00'
                         : null,
 
                     'break_out' => filled($breakOut)
-                        ? $breakOut . ':00'
+                        ? $breakOut.':00'
                         : null,
                 ]);
             }
@@ -264,7 +262,6 @@ class AttendanceRecord extends Model
         ];
     }
 
-
     // ログインユーザーの過去6ヶ月の勤怠レポートを取得する
     public static function getReportData(int $userId): array
     {
@@ -281,8 +278,7 @@ class AttendanceRecord extends Model
             ->get();
 
         // 出勤と退勤の両方が登録されている勤怠を取得する
-        $completed = $records->filter(fn ($record) =>
-            $record->clock_in && $record->clock_out
+        $completed = $records->filter(fn ($record) => $record->clock_in && $record->clock_out
         );
 
         // 基本サマリーを計算する
@@ -293,8 +289,7 @@ class AttendanceRecord extends Model
 
         // 今月の異常検知を計算する
         $anomalies = self::getReportAnomalies(
-            $records->filter(fn ($record) =>
-                $record->date->format('Y-m') === $currentMonth->format('Y-m')
+            $records->filter(fn ($record) => $record->date->format('Y-m') === $currentMonth->format('Y-m')
             )
         );
 
@@ -309,8 +304,7 @@ class AttendanceRecord extends Model
         $total = (int) $records->sum('total_work_minutes');
 
         // 1日8時間を超えた残業時間を合計する
-        $overtime = (int) $records->sum(fn ($record) =>
-            max(0, $record->total_work_minutes - 480)
+        $overtime = (int) $records->sum(fn ($record) => max(0, $record->total_work_minutes - 480)
         );
 
         // 出退勤が完了した日数を取得する
@@ -328,8 +322,7 @@ class AttendanceRecord extends Model
     private static function getMonthlyTrend(Collection $records, Carbon $currentMonth): Collection
     {
         // 勤怠データを年月ごとに分類する
-        $grouped = $records->groupBy(fn ($record) =>
-            $record->date->format('Y-m')
+        $grouped = $records->groupBy(fn ($record) => $record->date->format('Y-m')
         );
 
         // 5ヶ月前から今月までの6ヶ月分を作成する
@@ -345,8 +338,7 @@ class AttendanceRecord extends Model
             return [
                 'month' => $month,
                 'work_minutes' => (int) $monthlyRecords->sum('total_work_minutes'),
-                'overtime_minutes' => (int) $monthlyRecords->sum(fn ($record) =>
-                    max(0, $record->total_work_minutes - 480)
+                'overtime_minutes' => (int) $monthlyRecords->sum(fn ($record) => max(0, $record->total_work_minutes - 480)
                 ),
             ];
         });
@@ -358,21 +350,18 @@ class AttendanceRecord extends Model
         // 異常検知の集計結果を返す
         return [
             // 9時より後の出勤を遅刻として数える
-            'late_count' => $records->filter(fn ($record) =>
-                $record->clock_in &&
+            'late_count' => $records->filter(fn ($record) => $record->clock_in &&
                 Carbon::parse($record->clock_in)->format('H:i:s') > '09:00:00'
             )->count(),
 
             // 18時より前の退勤を早退として数える
-            'early_leave_count' => $records->filter(fn ($record) =>
-                $record->clock_in &&
+            'early_leave_count' => $records->filter(fn ($record) => $record->clock_in &&
                 $record->clock_out &&
                 Carbon::parse($record->clock_out)->format('H:i:s') < '18:00:00'
             )->count(),
 
             // 実労働時間が10時間を超えた日を数える
-            'long_work_count' => $records->filter(fn ($record) =>
-                $record->clock_in &&
+            'long_work_count' => $records->filter(fn ($record) => $record->clock_in &&
                 $record->clock_out &&
                 $record->total_work_minutes > 600
             )->count(),

@@ -8,8 +8,8 @@ use App\Http\Requests\Api\V1\StoreAttendanceRecordRequest;
 use App\Http\Requests\Api\V1\UpdateAttendanceRecordRequest;
 use App\Http\Resources\AttendanceRecordResource;
 use App\Models\AttendanceRecord;
-use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Pagination\LengthAwarePaginator;
 
 class AttendanceRecordController extends Controller
@@ -17,7 +17,7 @@ class AttendanceRecordController extends Controller
     /**
      * 勤怠一覧を取得する。
      *
-     * @param IndexAttendanceRecordRequest $request 検索条件
+     * @param  IndexAttendanceRecordRequest  $request  検索条件
      * @return AnonymousResourceCollection 勤怠一覧のJSONレスポンス
      */
     public function index(
@@ -51,7 +51,7 @@ class AttendanceRecordController extends Controller
             // monthが指定された場合だけ絞り込む
             ->when(
                 $validated['month'] ?? null,
-                fn ($query, $month) => $query->where('date', 'like', $month . '%')
+                fn ($query, $month) => $query->where('date', 'like', $month.'%')
             )
 
             // 日付が新しい順に並べる
@@ -89,7 +89,7 @@ class AttendanceRecordController extends Controller
     /**
      * 勤怠データを新規登録する。
      *
-     * @param StoreAttendanceRecordRequest $request バリデーション済みの登録情報
+     * @param  StoreAttendanceRecordRequest  $request  バリデーション済みの登録情報
      * @return JsonResponse 登録した勤怠情報
      */
     public function store(StoreAttendanceRecordRequest $request): JsonResponse
@@ -114,8 +114,8 @@ class AttendanceRecordController extends Controller
     /**
      * 指定された勤怠データを更新する。
      *
-     * @param UpdateAttendanceRecordRequest $request バリデーション済みの更新情報
-     * @param AttendanceRecord $attendanceRecord 更新対象の勤怠記録
+     * @param  UpdateAttendanceRecordRequest  $request  バリデーション済みの更新情報
+     * @param  AttendanceRecord  $attendanceRecord  更新対象の勤怠記録
      * @return AttendanceRecordResource 更新後の勤怠情報
      */
     public function update(
@@ -142,7 +142,7 @@ class AttendanceRecordController extends Controller
     /**
      * 指定された勤怠データを削除する。
      *
-     * @param AttendanceRecord $attendanceRecord 削除対象の勤怠記録
+     * @param  AttendanceRecord  $attendanceRecord  削除対象の勤怠記録
      * @return JsonResponse 削除結果のレスポンス
      */
     public function destroy(AttendanceRecord $attendanceRecord): JsonResponse

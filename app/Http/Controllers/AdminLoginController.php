@@ -2,16 +2,16 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Http\RedirectResponse;
 
 class AdminLoginController extends Controller
 {
     /**
      * 管理者のログイン処理を行う
      *
-     * @param Request $request Bladeから送信されたログイン情報
+     * @param  Request  $request  Bladeから送信されたログイン情報
      * @return RedirectResponse ログイン成功時または失敗時のリダイレクト
      */
     public function login(Request $request): RedirectResponse
@@ -37,9 +37,11 @@ class AdminLoginController extends Controller
         ])) {
             // ログイン成功後、セッションIDを新しくして安全性を高める
             $request->session()->regenerate();
+
             // ログイン後に管理者用勤怠一覧画面にリダイレクト
             return redirect('/admin/attendance/list');
         }
+
         // ログイン失敗時、ログイン画面に戻る
         return back()->withErrors([
             'email' => 'ログイン情報が登録されていません',

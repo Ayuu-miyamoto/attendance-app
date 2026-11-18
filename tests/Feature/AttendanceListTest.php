@@ -2,11 +2,11 @@
 
 namespace Tests\Feature;
 
-use App\Models\User;
 use App\Models\AttendanceRecord;
+use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
-use Carbon\Carbon;
 
 // ===============================================================
 // No.9 勤怠一覧情報取得機能テスト
@@ -74,8 +74,7 @@ class AttendanceListTest extends TestCase
 
                 // 他のユーザーの勤怠IDが一覧に存在しないことを確認する
                 return collect($records)->every(
-                    fn (array $record): bool =>
-                        !in_array($record['id'], $otherAttendanceIds, true)
+                    fn (array $record): bool => ! in_array($record['id'], $otherAttendanceIds, true)
                 );
             }
         );
@@ -221,12 +220,12 @@ class AttendanceListTest extends TestCase
 
         // 作成した勤怠データの詳細リンクが表示されることを確認する
         $response->assertSee(
-            'href="' . url('/attendance/' . $attendance->id) . '"',
+            'href="'.url('/attendance/'.$attendance->id).'"',
             false
         );
 
         // 詳細リンクの遷移先にアクセスする
-        $response = $this->get('/attendance/' . $attendance->id);
+        $response = $this->get('/attendance/'.$attendance->id);
 
         // 勤怠詳細画面が正常に表示されることを確認する
         $response->assertStatus(200);
@@ -305,7 +304,7 @@ class AttendanceListTest extends TestCase
                 );
 
                 // 該当日が存在しなければ失敗とする
-                if (!$day) {
+                if (! $day) {
                     return false;
                 }
 
@@ -332,7 +331,7 @@ class AttendanceListTest extends TestCase
 
         // 未出勤日の詳細リンクが表示されることを確認する
         $response->assertSee(
-            'href="' . url('/attendance/2026-10-12') . '"',
+            'href="'.url('/attendance/2026-10-12').'"',
             false
         );
 

@@ -202,13 +202,13 @@ class AdminStaffTest extends TestCase
 
         // 勤怠詳細へのリンクが存在することを確認する
         $response->assertSee(
-            '/attendance/' . $attendance->id,
+            '/attendance/'.$attendance->id,
             false
         );
 
         // 詳細画面を開く
         $detailResponse = $this->get(
-            '/attendance/' . $attendance->id
+            '/attendance/'.$attendance->id
         );
 
         // 詳細画面が正常に表示されることを確認する

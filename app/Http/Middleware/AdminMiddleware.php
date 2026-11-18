@@ -9,13 +9,12 @@ use Symfony\Component\HttpFoundation\Response;
 
 class AdminMiddleware
 {
-    
     public function handle(Request $request, Closure $next): Response
     {
         // 管理者ガードで認証されているか確認
         if (
-            !Auth::guard('admin')->check() ||
-            !Auth::guard('admin')->user()->admin_status
+            ! Auth::guard('admin')->check() ||
+            ! Auth::guard('admin')->user()->admin_status
         ) {
             return redirect('/admin/login');
         }
@@ -25,5 +24,4 @@ class AdminMiddleware
 
         return $next($request);
     }
-
 }

@@ -1,13 +1,13 @@
 <?php
 
-use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\AdminAttendanceController;
-use App\Http\Controllers\StaffController;
+use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\AttendanceReportController;
+use App\Http\Controllers\StaffController;
 use App\Models\AttendanceCorrect;
 use App\Models\User;
-use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Route;
 use Laravel\Fortify\Http\Controllers\AuthenticatedSessionController;
 
 // ==================================================================================
@@ -53,7 +53,6 @@ Route::get('/attendance/report', [
     'index',
 ])->middleware(['auth:web', 'verified']);
 
-
 // ==================================================================================
 // 一般ユーザー・管理者共通
 // ==================================================================================
@@ -79,7 +78,7 @@ Route::get('/attendance/{id}', function (string $id) {
         $user = Auth::guard('web')->user();
 
         // メール認証が完了していない場合
-        if (!$user->hasVerifiedEmail()) {
+        if (! $user->hasVerifiedEmail()) {
 
             // 認証案内画面へ移動する
             return redirect()->route('verification.notice');
@@ -130,7 +129,7 @@ Route::post('/attendance/{id}', function (string $id) {
         $user = Auth::guard('web')->user();
 
         // メール認証が完了していない場合
-        if (!$user->hasVerifiedEmail()) {
+        if (! $user->hasVerifiedEmail()) {
 
             // 認証案内画面へ移動する
             return redirect()->route('verification.notice');
@@ -160,7 +159,6 @@ Route::post('/attendance/{id}', function (string $id) {
     '[0-9]+|[0-9]{4}-[0-9]{2}-[0-9]{2}|[0-9]+-[0-9]{4}-[0-9]{2}-[0-9]{2}'
 );
 
-
 // ==================================================================================
 // 修正申請一覧・詳細
 // ==================================================================================
@@ -187,7 +185,7 @@ Route::get('/stamp_correction_request/list', function () {
         $user = Auth::guard('web')->user();
 
         // メール認証が完了していない場合
-        if (!$user->hasVerifiedEmail()) {
+        if (! $user->hasVerifiedEmail()) {
             return redirect()->route('verification.notice');
         }
 
@@ -211,7 +209,7 @@ Route::get('/application/{id}', function (int $id) {
 
         // 管理者の申請承認画面へ移動する
         return redirect(
-            '/stamp_correction_request/approve/' . $id
+            '/stamp_correction_request/approve/'.$id
         );
     }
 
@@ -223,7 +221,7 @@ Route::get('/application/{id}', function (int $id) {
         $user = Auth::guard('web')->user();
 
         // メール認証が完了していない場合
-        if (!$user->hasVerifiedEmail()) {
+        if (! $user->hasVerifiedEmail()) {
             return redirect()->route('verification.notice');
         }
 
@@ -241,7 +239,7 @@ Route::get('/application/{id}', function (int $id) {
 
         // 該当する勤怠詳細画面へ移動する
         return redirect(
-            '/attendance/' . $application->attendance_record_id
+            '/attendance/'.$application->attendance_record_id
         );
     }
 
@@ -249,7 +247,6 @@ Route::get('/application/{id}', function (int $id) {
     return redirect('/login');
 
 })->whereNumber('id');
-
 
 // ==================================================================================
 // 管理者

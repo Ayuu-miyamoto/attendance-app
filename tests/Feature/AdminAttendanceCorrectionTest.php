@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Models\AttendanceBreak;
 use App\Models\AttendanceCorrect;
 use App\Models\AttendanceRecord;
 use App\Models\BreakCorrect;
@@ -97,12 +96,12 @@ class AdminAttendanceCorrectionTest extends TestCase
 
         // 承認待ち申請の詳細リンクを確認する
         $response->assertSee(
-            '/stamp_correction_request/approve/' . $pending1->id,
+            '/stamp_correction_request/approve/'.$pending1->id,
             false
         );
 
         $response->assertSee(
-            '/stamp_correction_request/approve/' . $pending2->id,
+            '/stamp_correction_request/approve/'.$pending2->id,
             false
         );
 
@@ -150,12 +149,12 @@ class AdminAttendanceCorrectionTest extends TestCase
 
         // 各申請の詳細リンクを確認する
         $response->assertSee(
-            '/stamp_correction_request/approve/' . $approved1->id,
+            '/stamp_correction_request/approve/'.$approved1->id,
             false
         );
 
         $response->assertSee(
-            '/stamp_correction_request/approve/' . $approved2->id,
+            '/stamp_correction_request/approve/'.$approved2->id,
             false
         );
 
@@ -187,7 +186,7 @@ class AdminAttendanceCorrectionTest extends TestCase
 
         // 修正申請詳細画面を開く
         $response = $this->get(
-            '/stamp_correction_request/approve/' . $application->id
+            '/stamp_correction_request/approve/'.$application->id
         );
 
         // 正常に表示されることを確認する
@@ -239,12 +238,12 @@ class AdminAttendanceCorrectionTest extends TestCase
 
         // 修正申請を承認する
         $response = $this->post(
-            '/stamp_correction_request/approve/' . $application->id
+            '/stamp_correction_request/approve/'.$application->id
         );
 
         // 申請詳細画面へ戻ることを確認する
         $response->assertRedirect(
-            '/stamp_correction_request/approve/' . $application->id
+            '/stamp_correction_request/approve/'.$application->id
         );
 
         // 修正申請が承認済みになったことを確認する

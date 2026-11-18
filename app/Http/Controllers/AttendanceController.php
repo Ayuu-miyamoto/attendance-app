@@ -2,17 +2,17 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\AttendanceRecord;
+use App\Http\Requests\AttendanceCorrectionRequest;
 use App\Models\AttendanceBreak;
+use App\Models\AttendanceCorrect;
+use App\Models\AttendanceRecord;
+use App\Models\BreakCorrect;
+use Carbon\Carbon;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Carbon\Carbon;
-use App\Models\AttendanceCorrect;
-use App\Models\BreakCorrect;
-use App\Http\Requests\AttendanceCorrectionRequest;
 use Illuminate\View\View;
-use Illuminate\Http\RedirectResponse;
 
 class AttendanceController extends Controller
 {
@@ -32,12 +32,12 @@ class AttendanceController extends Controller
             ->first();
 
         // 勤怠がない、または出勤時刻が未登録の場合は勤務外とする
-        if (!$attendanceRecord || !$attendanceRecord->clock_in) {
+        if (! $attendanceRecord || ! $attendanceRecord->clock_in) {
 
             // 勤務外ステータスを設定する
             $attendanceStatus = '勤務外';
 
-        // 出勤時刻が登録されている場合
+            // 出勤時刻が登録されている場合
         } else {
 
             // Modelから勤怠ステータスを取得する
@@ -52,7 +52,7 @@ class AttendanceController extends Controller
 
         // 現在の日付を日本語形式に変換する
         $formattedDate = Carbon::now()->format('Y年n月j日')
-            . '(' . $weekdays[Carbon::now()->dayOfWeek] . ')';
+            .'('.$weekdays[Carbon::now()->dayOfWeek].')';
 
         // 現在の時刻を取得する
         $formattedTime = Carbon::now()->format('H:i');
@@ -68,7 +68,7 @@ class AttendanceController extends Controller
     /**
      * 出勤・退勤・休憩開始・休憩終了の打刻を処理する。
      *
-     * @param Request $request 打刻操作を含むリクエスト
+     * @param  Request  $request  打刻操作を含むリクエスト
      * @return RedirectResponse 勤怠打刻画面へのリダイレクト
      */
     public function store(Request $request): RedirectResponse
@@ -111,7 +111,7 @@ class AttendanceController extends Controller
             if ($action === 'clock_in') {
 
                 // 当日の勤怠レコードが存在しない場合
-                if (!$attendanceRecord) {
+                if (! $attendanceRecord) {
 
                     // 新しい勤怠レコードを作成する
                     AttendanceRecord::create([
@@ -120,8 +120,8 @@ class AttendanceController extends Controller
                         'clock_in' => now()->format('H:i:s'),
                     ]);
 
-                // 空欄の勤怠レコードが存在する場合
-                } elseif (!$attendanceRecord->clock_in) {
+                    // 空欄の勤怠レコードが存在する場合
+                } elseif (! $attendanceRecord->clock_in) {
 
                     // 既存の勤怠レコードに出勤時刻を保存する
                     $attendanceRecord->update([
@@ -137,7 +137,7 @@ class AttendanceController extends Controller
                 if (
                     $attendanceRecord
                     && $attendanceRecord->clock_in
-                    && !$attendanceRecord->clock_out
+                    && ! $attendanceRecord->clock_out
                 ) {
                     // 退勤時刻を保存する
                     $attendanceRecord->update([
@@ -153,7 +153,7 @@ class AttendanceController extends Controller
                 if (
                     $attendanceRecord
                     && $attendanceRecord->clock_in
-                    && !$attendanceRecord->clock_out
+                    && ! $attendanceRecord->clock_out
                 ) {
 
                     // 終了していない休憩が存在するか確認する
@@ -162,7 +162,7 @@ class AttendanceController extends Controller
                         ->exists();
 
                     // 休憩中でなければ新しい休憩を作成する
-                    if (!$hasOpenBreak) {
+                    if (! $hasOpenBreak) {
 
                         // 休憩開始時刻を保存する
                         AttendanceBreak::create([
@@ -180,7 +180,7 @@ class AttendanceController extends Controller
                 if (
                     $attendanceRecord
                     && $attendanceRecord->clock_in
-                    && !$attendanceRecord->clock_out
+                    && ! $attendanceRecord->clock_out
                 ) {
 
                     // 終了していない最新の休憩を取得する
@@ -211,7 +211,7 @@ class AttendanceController extends Controller
     /**
      * ログインユーザーの月次勤怠一覧を表示する。
      *
-     * @param Request $request 表示する年月を含むリクエスト
+     * @param  Request  $request  表示する年月を含むリクエスト
      * @return View 勤怠一覧画面
      */
     public function list(Request $request): View
@@ -277,10 +277,10 @@ class AttendanceController extends Controller
 
             // 日付と日本語の曜日を表示用に変換する
             $formattedDate = $day->format('m/d')
-                . '(' . $weekdays[$day->dayOfWeek] . ')';
+                .'('.$weekdays[$day->dayOfWeek].')';
 
             // 勤怠レコードが存在しない場合
-            if (!$attendance) {
+            if (! $attendance) {
 
                 // 日付形式のIDと空欄の勤怠情報を設定する
                 $formattedAttendanceRecords[] = [
@@ -356,7 +356,7 @@ class AttendanceController extends Controller
     /**
      * 指定された勤怠の詳細画面を表示する。
      *
-     * @param int|string $id 勤怠IDまたはYYYY-MM-DD形式の日付
+     * @param  int|string  $id  勤怠IDまたはYYYY-MM-DD形式の日付
      * @return View|RedirectResponse 勤怠詳細画面またはリダイレクト
      */
     public function show(int|string $id): View|RedirectResponse
@@ -365,7 +365,7 @@ class AttendanceController extends Controller
         $user = Auth::user();
 
         // 日付形式のIDが指定された場合
-        if (!ctype_digit((string) $id)) {
+        if (! ctype_digit((string) $id)) {
 
             // 指定された日付を厳密に解析する
             $date = \DateTimeImmutable::createFromFormat('!Y-m-d', (string) $id);
@@ -387,7 +387,7 @@ class AttendanceController extends Controller
             if ($attendanceRecord) {
 
                 // 数値IDの詳細画面へ移動する
-                return redirect('/attendance/' . $attendanceRecord->id);
+                return redirect('/attendance/'.$attendanceRecord->id);
             }
 
             // 日付をCarbonオブジェクトに変換する
@@ -456,7 +456,7 @@ class AttendanceController extends Controller
                 }
             )->toArray();
 
-        // 承認待ちの修正申請がない場合
+            // 承認待ちの修正申請がない場合
         } else {
 
             // 元の休憩データを表示用に変換する
@@ -510,8 +510,8 @@ class AttendanceController extends Controller
     /**
      * 勤怠修正申請と休憩修正内容を保存する。
      *
-     * @param AttendanceCorrectionRequest $request バリデーション済みの申請リクエスト
-     * @param int|string $id 勤怠IDまたはYYYY-MM-DD形式の日付
+     * @param  AttendanceCorrectionRequest  $request  バリデーション済みの申請リクエスト
+     * @param  int|string  $id  勤怠IDまたはYYYY-MM-DD形式の日付
      * @return RedirectResponse 勤怠詳細画面へのリダイレクト
      */
     public function requestCorrection(
@@ -552,7 +552,7 @@ class AttendanceController extends Controller
                 )
                     ->findOrFail($id);
 
-            // 日付形式のIDが指定された場合
+                // 日付形式のIDが指定された場合
             } else {
 
                 // 指定された日付を厳密に解析する
@@ -577,7 +577,7 @@ class AttendanceController extends Controller
                     ->first();
 
                 // 勤怠レコードが存在しない場合
-                if (!$attendanceRecord) {
+                if (! $attendanceRecord) {
 
                     // 出退勤時刻が空欄の勤怠レコードを作成する
                     $attendanceRecord = AttendanceRecord::create([
@@ -652,7 +652,7 @@ class AttendanceController extends Controller
         });
 
         // 保存後は数値IDの勤怠詳細画面へ移動する
-        return redirect('/attendance/' . $attendanceId);
+        return redirect('/attendance/'.$attendanceId);
     }
 
     /**

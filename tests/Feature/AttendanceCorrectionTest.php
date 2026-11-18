@@ -2,9 +2,9 @@
 
 namespace Tests\Feature;
 
-use App\Models\User;
-use App\Models\AttendanceRecord;
 use App\Models\AttendanceCorrect;
+use App\Models\AttendanceRecord;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -31,7 +31,7 @@ class AttendanceCorrectionTest extends TestCase
 
         // 出勤時刻を退勤時刻より後にして修正申請する
         $response = $this->actingAs($user)->post(
-            '/attendance/' . $attendance->id,
+            '/attendance/'.$attendance->id,
             [
                 'new_clock_in' => '19:00',
                 'new_clock_out' => '18:00',
@@ -67,7 +67,7 @@ class AttendanceCorrectionTest extends TestCase
 
         // 休憩開始時刻を退勤時刻より後に設定する
         $response = $this->actingAs($user)->post(
-            '/attendance/' . $attendance->id,
+            '/attendance/'.$attendance->id,
             [
                 'new_clock_in' => '09:00',
                 'new_clock_out' => '18:00',
@@ -104,7 +104,7 @@ class AttendanceCorrectionTest extends TestCase
 
         // 休憩終了時刻を退勤時刻より後にして修正申請する
         $response = $this->actingAs($user)->post(
-            '/attendance/' . $attendance->id,
+            '/attendance/'.$attendance->id,
             [
                 'new_clock_in' => '09:00',
                 'new_clock_out' => '18:00',
@@ -141,7 +141,7 @@ class AttendanceCorrectionTest extends TestCase
 
         // 備考を空欄にして修正申請する
         $response = $this->actingAs($user)->post(
-            '/attendance/' . $attendance->id,
+            '/attendance/'.$attendance->id,
             [
                 'new_clock_in' => '09:00',
                 'new_clock_out' => '18:00',
@@ -176,7 +176,7 @@ class AttendanceCorrectionTest extends TestCase
 
         // ログインして正しい内容で修正申請する
         $response = $this->actingAs($user)->post(
-            '/attendance/' . $attendance->id,
+            '/attendance/'.$attendance->id,
             [
                 'new_clock_in' => '09:30',
                 'new_clock_out' => '18:30',
@@ -187,7 +187,7 @@ class AttendanceCorrectionTest extends TestCase
         );
 
         // 修正申請後に勤怠詳細画面へ戻ることを確認する
-        $response->assertRedirect('/attendance/' . $attendance->id);
+        $response->assertRedirect('/attendance/'.$attendance->id);
 
         // 修正申請が承認待ちで保存されていることを確認する
         $this->assertDatabaseHas('attendance_corrects', [
@@ -350,18 +350,18 @@ class AttendanceCorrectionTest extends TestCase
 
         // 申請詳細へのリンクが表示されることを確認する
         $response->assertSee(
-            'href="' . url('/application/' . $correction->id) . '"',
+            'href="'.url('/application/'.$correction->id).'"',
             false
         );
 
         // 申請詳細リンクにアクセスする
-        $detailResponse = $this->get('/application/' . $correction->id);
+        $detailResponse = $this->get('/application/'.$correction->id);
 
         // 勤怠詳細画面にリダイレクトされることを確認する
-        $detailResponse->assertRedirect('/attendance/' . $attendance->id);
+        $detailResponse->assertRedirect('/attendance/'.$attendance->id);
 
         // リダイレクト先の勤怠詳細画面にアクセスする
-        $attendanceResponse = $this->get('/attendance/' . $attendance->id);
+        $attendanceResponse = $this->get('/attendance/'.$attendance->id);
 
         // 勤怠詳細画面が正常に表示されることを確認する
         $attendanceResponse->assertStatus(200);
@@ -394,7 +394,7 @@ class AttendanceCorrectionTest extends TestCase
 
         // ログインして勤怠詳細画面を表示する
         $response = $this->actingAs($user)
-            ->get('/attendance/' . $attendance->id);
+            ->get('/attendance/'.$attendance->id);
 
         // 画面が正常に表示されることを確認する
         $response->assertStatus(200);
@@ -433,7 +433,7 @@ class AttendanceCorrectionTest extends TestCase
 
         // 同じ勤怠に対して、もう一度修正申請する
         $response = $this->actingAs($user)->post(
-            '/attendance/' . $attendance->id,
+            '/attendance/'.$attendance->id,
             [
                 'new_clock_in' => '10:00',
                 'new_clock_out' => '19:00',
@@ -442,7 +442,7 @@ class AttendanceCorrectionTest extends TestCase
         );
 
         // 勤怠詳細画面に戻ることを確認する
-        $response->assertRedirect('/attendance/' . $attendance->id);
+        $response->assertRedirect('/attendance/'.$attendance->id);
 
         // 修正申請が増えていないことを確認する
         $this->assertDatabaseCount('attendance_corrects', 1);

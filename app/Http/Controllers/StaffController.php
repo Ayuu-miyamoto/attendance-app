@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\User;
 use App\Models\AttendanceRecord;
+use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -89,13 +89,13 @@ class StaffController extends Controller
 
             // 日付と曜日を表示用に変換する
             $formattedDate = $day->format('m/d')
-                . '(' . $weekdays[$day->dayOfWeek] . ')';
+                .'('.$weekdays[$day->dayOfWeek].')';
 
             // 勤怠レコードが存在しない場合
-            if (!$record) {
+            if (! $record) {
 
                 // スタッフIDと日付を組み合わせた詳細用IDを作成する
-                $detailId = $user->id . '-' . $dayString;
+                $detailId = $user->id.'-'.$dayString;
 
                 // 未出勤日の表示情報を追加する
                 $formattedAttendanceRecords[] = [
