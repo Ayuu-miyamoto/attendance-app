@@ -127,7 +127,8 @@ erDiagram
 ### 1. リポジトリをクローン
 
 ```bash
-git clone git@github.com:Ayuu-miyamoto/attendance-app.git
+git clone https://github.com/Ayuu-miyamoto/attendance-app.git
+
 cd attendance-app
 ```
 
@@ -300,7 +301,7 @@ Viteの開発サーバーを起動します。
 |---|---|
 | ログイン | /admin/login |
 | 日次勤怠一覧 | /admin/attendance/list |
-| 勤怠詳細 | /admin/attendance/{id} |
+| 勤怠詳細 | /attendance/{id} |
 | スタッフ一覧 | /admin/staff/list |
 | スタッフ別月次勤怠一覧 | /admin/attendance/staff/{id} |
 | 勤怠修正申請一覧 | /stamp_correction_request/list |
