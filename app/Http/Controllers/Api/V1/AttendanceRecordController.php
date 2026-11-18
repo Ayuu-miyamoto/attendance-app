@@ -4,13 +4,13 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\IndexAttendanceRecordRequest;
+use App\Http\Requests\Api\V1\StoreAttendanceRecordRequest;
 use App\Http\Requests\Api\V1\UpdateAttendanceRecordRequest;
 use App\Http\Resources\AttendanceRecordResource;
 use App\Models\AttendanceRecord;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Auth\Access\AuthorizationException;
-use App\Http\Requests\Api\V1\StoreAttendanceRecordRequest;
+use Illuminate\Pagination\LengthAwarePaginator;
 
 class AttendanceRecordController extends Controller
 {
@@ -31,7 +31,7 @@ class AttendanceRecordController extends Controller
         $perPage = $validated['per_page'] ?? 20;
 
         // 勤怠データの取得条件を組み立てる
-        $attendanceRecords = AttendanceRecord::query()
+        $query = AttendanceRecord::query()
 
             // ユーザーと休憩データをまとめて取得する
             ->with(['user', 'breaks'])
@@ -55,19 +55,24 @@ class AttendanceRecordController extends Controller
             )
 
             // 日付が新しい順に並べる
-            ->latest('date')
+            ->latest('date');
 
-            // 指定件数ごとにページ分割する
-            ->paginate($perPage)
+        // paginate()の戻り値がLengthAwarePaginatorであることを明示する
+        /** @var LengthAwarePaginator $attendanceRecords */
 
-            // 検索条件を次のページにも引き継ぐ
-            ->withQueryString();
+        // 指定件数ごとにページ分割する
+        $attendanceRecords = $query->paginate($perPage);
+
+        // 検索条件を次のページにも引き継ぐ
+        $attendanceRecords->withQueryString();
 
         // 勤怠一覧をResourceでJSON形式に変換して返す
         return AttendanceRecordResource::collection($attendanceRecords);
     }
 
-    // 指定された勤怠IDの詳細情報を取得する
+    /**
+     * 指定された勤怠IDの詳細情報を取得する。
+     */
     public function show(AttendanceRecord $attendanceRecord): AttendanceRecordResource
     {
         // ユーザー・休憩・修正申請の関連データを取得する
@@ -80,7 +85,7 @@ class AttendanceRecordController extends Controller
         // 勤怠詳細をResourceでJSON形式に変換して返す
         return new AttendanceRecordResource($attendanceRecord);
     }
-    
+
     /**
      * 勤怠データを新規登録する。
      *
@@ -111,23 +116,15 @@ class AttendanceRecordController extends Controller
      *
      * @param UpdateAttendanceRecordRequest $request バリデーション済みの更新情報
      * @param AttendanceRecord $attendanceRecord 更新対象の勤怠記録
-     * @return AttendanceRecordResource|JsonResponse 更新後の勤怠情報またはエラーレスポンス
+     * @return AttendanceRecordResource 更新後の勤怠情報
      */
     public function update(
         UpdateAttendanceRecordRequest $request,
         AttendanceRecord $attendanceRecord
-    ): AttendanceRecordResource|JsonResponse {
+    ): AttendanceRecordResource {
 
-        // Policyによる認可エラーを捕捉する
-        try {
-            // Policyを使用して更新権限を確認する
-            $this->authorize('update', $attendanceRecord);
-        } catch (AuthorizationException $e) {
-            // 権限がない場合は仕様書どおりのJSONを返す
-            return response()->json([
-                'error' => 'この操作を実行する権限がありません。',
-            ], 403);
-        }
+        // Policyを使用して更新権限を確認する
+        $this->authorize('update', $attendanceRecord);
 
         // バリデーション済みの更新データを取得する
         $validated = $request->validated();
@@ -150,16 +147,8 @@ class AttendanceRecordController extends Controller
      */
     public function destroy(AttendanceRecord $attendanceRecord): JsonResponse
     {
-        // Policyによる認可エラーを捕捉する
-        try {
-            // Policyを使用して削除権限を確認する
-            $this->authorize('delete', $attendanceRecord);
-        } catch (AuthorizationException $e) {
-            // 権限がない場合は仕様書どおりのJSONを返す
-            return response()->json([
-                'error' => 'この操作を実行する権限がありません。',
-            ], 403);
-        }
+        // Policyを使用して削除権限を確認する
+        $this->authorize('delete', $attendanceRecord);
 
         // 指定された勤怠データを削除する
         $attendanceRecord->delete();
@@ -167,5 +156,4 @@ class AttendanceRecordController extends Controller
         // 削除成功時はレスポンスボディなしでHTTPステータス204を返す
         return response()->json(null, 204);
     }
-
 }

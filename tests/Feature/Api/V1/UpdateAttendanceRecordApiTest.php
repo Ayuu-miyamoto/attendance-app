@@ -351,4 +351,142 @@ class UpdateAttendanceRecordApiTest extends TestCase
             'comment' => 'PATCHで修正',
         ]);
     }
+
+
+    /**
+     * 退勤時刻だけを送信して更新できる。
+     *
+     * @return void
+     */
+    public function test_user_can_update_only_clock_out(): void
+    {
+        // テスト用ユーザーを作成する
+        $user = User::factory()->create();
+
+        // 更新対象の勤怠を作成する
+        $attendanceRecord = AttendanceRecord::create([
+            'user_id' => $user->id,
+            'date' => '2026-11-09',
+            'clock_in' => '09:00:00',
+            'clock_out' => '18:00:00',
+        ]);
+
+        // Sanctumでユーザーを認証する
+        Sanctum::actingAs($user);
+
+        // 退勤時刻だけを送信する
+        $response = $this->patchJson(
+            "/api/v1/attendance-records/{$attendanceRecord->id}",
+            [
+                'clock_out' => '19:00:00',
+            ]
+        );
+
+        // HTTPステータス200を確認する
+        $response->assertStatus(200);
+
+        // 退勤時刻が更新されたことを確認する
+        $response->assertJsonPath('data.clock_out', '19:00:00');
+
+        // 未送信の項目が変更されていないことを確認する
+        $this->assertDatabaseHas('attendance_records', [
+            'id' => $attendanceRecord->id,
+            'date' => '2026-11-09',
+            'clock_in' => '09:00:00',
+            'clock_out' => '19:00:00',
+        ]);
+    }
+
+    /**
+     * 出勤時刻だけを更新した場合も既存の退勤時刻と比較する。
+     *
+     * @return void
+     */
+    public function test_clock_in_only_update_validates_existing_clock_out(): void
+    {
+        // テスト用ユーザーを作成する
+        $user = User::factory()->create();
+
+        // 更新対象の勤怠を作成する
+        $attendanceRecord = AttendanceRecord::create([
+            'user_id' => $user->id,
+            'date' => '2026-11-09',
+            'clock_in' => '09:00:00',
+            'clock_out' => '18:00:00',
+        ]);
+
+        // Sanctumでユーザーを認証する
+        Sanctum::actingAs($user);
+
+        // 既存の退勤時刻より後の出勤時刻を送信する
+        $response = $this->patchJson(
+            "/api/v1/attendance-records/{$attendanceRecord->id}",
+            [
+                'clock_in' => '19:00:00',
+            ]
+        );
+
+        // HTTPステータス422を確認する
+        $response->assertStatus(422);
+
+        // 時刻の前後関係のエラーを確認する
+        $response->assertJsonPath(
+            'errors.clock_out.0',
+            '退勤時刻は出勤時刻より後の時刻を指定してください。'
+        );
+
+        // 不正な出勤時刻で更新されていないことを確認する
+        $this->assertDatabaseHas('attendance_records', [
+            'id' => $attendanceRecord->id,
+            'clock_in' => '09:00:00',
+            'clock_out' => '18:00:00',
+        ]);
+    }
+
+    /**
+     * 出勤時刻より前の退勤時刻は更新できない。
+     *
+     * @return void
+     */
+    public function test_clock_out_before_clock_in_returns_validation_error(): void
+    {
+        // テスト用ユーザーを作成する
+        $user = User::factory()->create();
+
+        // 更新対象の勤怠を作成する
+        $attendanceRecord = AttendanceRecord::create([
+            'user_id' => $user->id,
+            'date' => '2026-11-09',
+            'clock_in' => '09:00:00',
+            'clock_out' => '18:00:00',
+        ]);
+
+        // Sanctumでユーザーを認証する
+        Sanctum::actingAs($user);
+
+        // 出勤時刻より前の退勤時刻を送信する
+        $response = $this->patchJson(
+            "/api/v1/attendance-records/{$attendanceRecord->id}",
+            [
+                'clock_out' => '08:00:00',
+            ]
+        );
+
+        // HTTPステータス422を確認する
+        $response->assertStatus(422);
+
+        // 日本語のバリデーションエラーを確認する
+        $response->assertJsonPath(
+            'errors.clock_out.0',
+            '退勤時刻は出勤時刻より後の時刻を指定してください。'
+        );
+
+        // データベースの値が変更されていないことを確認する
+        $this->assertDatabaseHas('attendance_records', [
+            'id' => $attendanceRecord->id,
+            'clock_in' => '09:00:00',
+            'clock_out' => '18:00:00',
+        ]);
+    }
+
 }

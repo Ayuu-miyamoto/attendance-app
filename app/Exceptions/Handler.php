@@ -4,13 +4,15 @@ namespace App\Exceptions;
 
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
 use Illuminate\Http\Request;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Throwable;
 
 class Handler extends ExceptionHandler
 {
     /**
-     * The list of the inputs that are never flashed to the session on validation exceptions.
+     * バリデーションエラー時にセッションへ保存しない入力項目。
      *
      * @var array<int, string>
      */
@@ -21,16 +23,32 @@ class Handler extends ExceptionHandler
     ];
 
     /**
-     * Register the exception handling callbacks for the application.
+     * 例外発生時の処理を登録する。
      */
     public function register(): void
     {
-        // Laravel標準の例外報告処理
+        // Laravel標準の例外報告処理を登録する
         $this->reportable(function (Throwable $e) {
             //
         });
 
-        // 存在しないURLやデータに対する404エラーを処理する
+        // 勤怠データが存在しない場合の404エラーを処理する
+        $this->renderable(function (ModelNotFoundException $exception, Request $request) {
+
+            // APIへのリクエストの場合だけ独自のJSONを返す
+            if ($request->is('api/*')) {
+
+                // 日本語のエラーメッセージと404ステータスを返す
+                return response()->json([
+                    'error' => '勤怠情報が見つかりませんでした。',
+                ], 404);
+            }
+
+            // Web側はLaravel標準のエラー処理に任せる
+            return null;
+        });
+
+        // 存在しない勤怠詳細APIへの404エラーを処理する
         $this->renderable(function (NotFoundHttpException $exception, Request $request) {
 
             // 勤怠詳細APIへのリクエストの場合だけ独自のJSONを返す
@@ -42,7 +60,23 @@ class Handler extends ExceptionHandler
                 ], 404);
             }
 
-            // それ以外はLaravel標準のエラー処理に任せる
+            // Web側はLaravel標準のエラー処理に任せる
+            return null;
+        });
+
+        // APIで認可エラーが発生した場合の403エラーを処理する
+        $this->renderable(function (AccessDeniedHttpException $exception, Request $request) {
+
+            // APIへのリクエストの場合だけ独自のJSONを返す
+            if ($request->is('api/*')) {
+
+                // 日本語のエラーメッセージと403ステータスを返す
+                return response()->json([
+                    'error' => 'この操作を実行する権限がありません。',
+                ], 403);
+            }
+
+            // Web側はLaravel標準のエラー処理に任せる
             return null;
         });
     }
